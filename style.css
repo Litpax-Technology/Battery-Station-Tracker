@@ -69,6 +69,17 @@
   .tl-item b{font-size:14px}
   .tl-item .meta{font-size:12.5px;color:var(--muted)}
 
+  /* ===== Barcode labels ===== */
+  #labelSheet{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:14px}
+  .label{border:1px dashed var(--line);border-radius:8px;padding:10px;text-align:center;background:#fff}
+  .label svg{max-width:100%}
+  @media print{
+    body *{visibility:hidden}
+    #labelSheet, #labelSheet *{visibility:visible}
+    #labelSheet{position:absolute;left:0;top:0;width:100%}
+    .label{page-break-inside:avoid;border-color:#bbb}
+  }
+
   #loader{position:fixed;top:0;left:0;right:0;height:3px;background:var(--accent);display:none;animation:load 1s infinite}
   @keyframes load{0%{transform:scaleX(0);transform-origin:left}50%{transform:scaleX(1)}100%{transform:scaleX(0);transform-origin:right}}
   @media(max-width:600px){.counter{font-size:48px}}
