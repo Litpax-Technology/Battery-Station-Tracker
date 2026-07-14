@@ -22,15 +22,12 @@
     </div>
     <div class="nav">
       <button class="active" onclick="showTab('station',this)">📷 Scan Station</button>
-      <button onclick="showTab('search',this)">🔍 Battery Search</button>
-      <button onclick="showTab('dash',this)">📊 Dashboard</button>
-      <button onclick="showTab('emp',this)">👥 Employees</button>
-      <button onclick="showTab('admin',this)">⚙️ Admin</button>
+      <button onclick="showTab('my',this)">📊 My Dashboard</button>
     </div>
     <div class="spacer"></div>
     <div id="employeeChip">
       <div class="nm" id="wName"></div>
-      <span class="st" id="wStage"></span><br>
+      <span class="st" id="wHall"></span> <span class="st" id="wStage"></span><br>
       <button class="out" onclick="logout()">Sign out</button>
     </div>
   </aside>
@@ -42,13 +39,22 @@
   <div class="tab active" id="tab-station">
     <div class="pagehead">
       <h1>Scan Station</h1>
-      <p>Track every battery through each production stage</p>
+      <p>Scan every battery you work on — everything else is automatic</p>
     </div>
 
-    <!-- Login view -->
-    <div id="loginView">
+    <!-- Step 1: choose hall -->
+    <div id="hallView">
       <div class="card" style="text-align:center;max-width:520px;margin:0 auto">
-        <h2>Employee Sign In</h2>
+        <h2>Select your hall</h2>
+        <p class="hint">Choose the production hall you work in</p>
+        <div id="hallButtons" class="row" style="margin-top:16px;justify-content:center"></div>
+      </div>
+    </div>
+
+    <!-- Step 2: sign in -->
+    <div id="loginView" style="display:none">
+      <div class="card" style="text-align:center;max-width:520px;margin:0 auto">
+        <h2>Employee Sign In · <span class="badge stage" id="hallBadge"></span></h2>
         <p class="hint">Scan your employee ID card — or select your name and enter your PIN</p>
         <input id="loginScan" placeholder="Scan employee ID…" autocomplete="off"
                style="max-width:380px;margin:16px auto;text-align:center;font-size:17px">
@@ -58,6 +64,7 @@
           <button class="btn" onclick="pinLogin()">Sign in</button>
         </div>
         <p id="loginMsg" class="hint" style="margin-top:10px;color:var(--err)"></p>
+        <button class="btn ghost sm" style="margin-top:14px" onclick="changeHall()">← Change hall</button>
       </div>
     </div>
 
@@ -107,113 +114,36 @@
     </div>
   </div>
 
-  <!-- ============ SEARCH ============ -->
-  <div class="tab" id="tab-search">
-    <div class="pagehead">
-      <h1>Battery Search</h1>
-      <p>View the complete journey of any battery</p>
-    </div>
-    <div class="card">
-      <div class="row">
-        <input id="searchSerial" placeholder="Enter serial number" style="flex:3">
-        <button class="btn" onclick="searchBattery()">Search</button>
-      </div>
-    </div>
-    <div class="card" id="searchResult" style="display:none"></div>
-  </div>
-
-  <!-- ============ DASHBOARD ============ -->
-  <div class="tab" id="tab-dash">
+  <!-- ============ MY DASHBOARD ============ -->
+  <div class="tab" id="tab-my">
     <div class="pagehead" style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
       <div>
-        <h1>Dashboard</h1>
-        <p>Live production status and employee output</p>
+        <h1>My Dashboard</h1>
+        <p id="myDashSub">Your output and working pace</p>
       </div>
-      <button class="btn ghost sm" onclick="loadDashboard()">↻ Refresh</button>
-    </div>
-    <div class="statgrid" id="dashStats"></div>
-    <div class="card" style="margin-top:16px">
-      <h2>Work in progress by stage</h2>
-      <table id="wipTable"><thead><tr><th>Stage</th><th>Batteries</th></tr></thead><tbody></tbody></table>
-    </div>
-    <div class="card">
-      <h2>Today's employee output</h2>
-      <table id="workerTable"><thead><tr><th>Employee</th><th>By stage</th><th>Total</th></tr></thead><tbody></tbody></table>
-    </div>
-  </div>
-
-  <!-- ============ EMPLOYEES ============ -->
-  <div class="tab" id="tab-emp">
-    <div class="pagehead" style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
-      <div>
-        <h1>Employee Performance</h1>
-        <p>Output and working pace, calculated from scan records</p>
-      </div>
-      <select id="empPeriod" style="max-width:150px" onchange="loadEmployeeStats()">
-        <option value="1">Today</option>
-        <option value="7" selected>Last 7 days</option>
+      <select id="myPeriod" style="max-width:150px" onchange="loadMyStats()">
+        <option value="1" selected>Today</option>
+        <option value="7">Last 7 days</option>
         <option value="30">Last 30 days</option>
-        <option value="0">All time</option>
       </select>
     </div>
-    <div class="card">
-      <table id="empTable">
-        <thead><tr>
-          <th>Employee</th><th>Total output</th><th>Days worked</th>
-          <th>Avg / day</th><th>Output by stage</th><th>Avg pace</th>
-        </tr></thead>
-        <tbody></tbody>
-      </table>
-      <p class="hint" style="margin-top:12px">
-        Pace = average time between consecutive scans at the same stage. Gaps longer than
-        30 minutes are treated as breaks and excluded. Shown only when at least 3 readings exist.
-      </p>
-    </div>
-  </div>
 
-  <!-- ============ ADMIN ============ -->
-  <div class="tab" id="tab-admin">
-    <div class="pagehead">
-      <h1>Admin</h1>
-      <p>Manage employees, stages and system settings</p>
+    <div id="myLocked" class="card" style="text-align:center">
+      <p class="hint">Please sign in at the Scan Station to see your dashboard.</p>
     </div>
 
-    <div class="card" id="adminLogin" style="max-width:420px">
-      <h2>Admin access</h2>
-      <div class="row">
-        <input id="adminPin" type="password" placeholder="Admin PIN">
-        <button class="btn" onclick="adminVerify()">Unlock</button>
-      </div>
-      <p id="adminMsg" class="hint" style="margin-top:8px;color:var(--err)"></p>
-    </div>
-
-    <div id="adminPanel" style="display:none">
-      <div class="card">
-        <h2>Employees</h2>
-        <table id="adminWorkers"><thead><tr><th>ID</th><th>Name</th><th>Default stage</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
-        <div class="row" style="margin-top:14px">
-          <input id="nwId" placeholder="Employee ID (e.g. W-102)">
-          <input id="nwName" placeholder="Full name">
-          <select id="nwStage"></select>
-          <input id="nwPin" placeholder="PIN" style="max-width:90px">
-          <button class="btn" onclick="addWorker()">+ Add employee</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Stages</h2>
-        <table id="adminStages"><thead><tr><th>Order</th><th>Stage</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
-        <div class="row" style="margin-top:14px">
-          <input id="nsOrder" type="number" placeholder="Order" style="max-width:90px">
-          <input id="nsName" placeholder="Stage name">
-          <button class="btn" onclick="addStage()">+ Add stage</button>
-        </div>
-        <p class="hint" style="margin-top:8px">Deactivating a stage removes it from the flow — historical data stays intact.</p>
-      </div>
-
-      <div class="card">
-        <h2>Settings</h2>
-        <table id="adminSettings"><thead><tr><th>Setting</th><th>Value</th><th></th></tr></thead><tbody></tbody></table>
+    <div id="myStats" style="display:none">
+      <div class="statgrid" id="myCards"></div>
+      <div class="card" style="margin-top:16px">
+        <h2>My output by stage</h2>
+        <table id="myTable">
+          <thead><tr><th>Stage</th><th>Batteries</th><th>Avg pace</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="hint" style="margin-top:12px">
+          Pace = average time between your consecutive scans at a stage. Gaps longer than
+          30 minutes are treated as breaks. Shown after at least 3 readings.
+        </p>
       </div>
     </div>
   </div>
