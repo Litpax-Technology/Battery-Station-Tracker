@@ -11,7 +11,7 @@ function api(params, cb){
   window[name] = function(res){
     document.getElementById('loader').style.display='none';
     delete window[name]; s.remove();
-    cb(res || {ok:false, error:'Empty response'});
+    cb(res || {ok:false, error:'Empty response from server'});
   };
   params.callback = name;
   var q = Object.keys(params).map(function(k){
@@ -20,7 +20,7 @@ function api(params, cb){
   var s = document.createElement('script');
   s.src = API_URL + '?' + q;
   s.onerror = function(){ document.getElementById('loader').style.display='none';
-    cb({ok:false, error:'Server se connect nahi hua'}); };
+    cb({ok:false, error:'Could not connect to the server'}); };
   document.body.appendChild(s);
 }
 
@@ -42,7 +42,7 @@ function loadConfig(){
     CONFIG = r;
     document.getElementById('coName').textContent = r.settings.CompanyName || '';
     var wSel = document.getElementById('loginWorker');
-    wSel.innerHTML = '<option value="">-- Worker chuno --</option>' +
+    wSel.innerHTML = '<option value="">— Select employee —</option>' +
       r.workers.map(function(w){ return '<option value="'+w.id+'">'+w.name+' ('+w.id+')</option>'; }).join('');
     var opts = r.stages.map(function(s){ return '<option>'+s.name+'</option>'; }).join('');
     document.getElementById('stageSelect').innerHTML = opts;
@@ -71,7 +71,7 @@ document.getElementById('loginScan').addEventListener('keydown', function(e){
 function pinLogin(){
   var id = document.getElementById('loginWorker').value;
   var pin = document.getElementById('loginPin').value;
-  if(!id) return setLoginMsg('Worker select karo');
+  if(!id) return setLoginMsg('Please select an employee');
   doLogin(id, pin);
 }
 function doLogin(id, pin){
@@ -94,7 +94,7 @@ function startSession(w){
 
   document.getElementById('loginView').style.display='none';
   document.getElementById('scanView').style.display='block';
-  document.getElementById('workerChip').style.display='inline-flex';
+  document.getElementById('employeeChip').style.display='inline-flex';
   document.getElementById('wName').textContent = w.name;
   document.getElementById('wStage').textContent = SESSION.stage;
   document.getElementById('stageLabel').textContent = SESSION.stage;
@@ -107,7 +107,7 @@ function logout(){
   SESSION = null;
   document.getElementById('scanView').style.display='none';
   document.getElementById('loginView').style.display='block';
-  document.getElementById('workerChip').style.display='none';
+  document.getElementById('employeeChip').style.display='none';
   document.getElementById('loginPin').value='';
   setLoginMsg('');
 }
@@ -147,7 +147,7 @@ function doSwitch(id){
   api({action:'login', workerId:id}, function(r){
     if(!r.ok){ flash(false, r.error); return; }
     startSession(r.worker);
-    flash(true, 'Session switch: ' + r.worker.name);
+    flash(true, 'Signed in: ' + r.worker.name);
   });
 }
 function submitScan(serial){
@@ -170,7 +170,7 @@ function generateBatteries(){
   var count = document.getElementById('genCount').value;
   api({action:'generate', workerId:SESSION.id, count:count}, function(r){
     if(!r.ok){ flash(false, r.error); return; }
-    flash(true, '✔ ' + r.serials.length + ' nayi battery — labels neeche');
+    flash(true, '✔ ' + r.serials.length + ' new batteries created — labels below');
     document.getElementById('todayCount').textContent = r.todayCount;
     r.serials.forEach(function(sn){
       sessionScans.unshift({serial:sn, time:new Date()});
@@ -209,7 +209,7 @@ function flash(ok, msg){
 }
 function renderRecent(){
   var ul = document.getElementById('recentList');
-  if(!sessionScans.length){ ul.innerHTML = '<li class="hint" style="border:none">Abhi koi scan nahi</li>'; return; }
+  if(!sessionScans.length){ ul.innerHTML = '<li class="hint" style="border:none">No scans yet</li>'; return; }
   ul.innerHTML = sessionScans.map(function(s){
     return '<li><b>'+s.serial+'</b><span class="t">'+s.time.toLocaleTimeString()+'</span></li>';
   }).join('');
@@ -223,7 +223,7 @@ function searchBattery(){
     var box = document.getElementById('searchResult');
     box.style.display='block';
     if(!r.ok){ box.innerHTML = '<p class="hint" style="color:var(--err)">'+r.error+'</p>'; return; }
-    var html = '<h2>'+r.serial+' <span class="badge stage">Abhi: '+r.currentStage+'</span></h2><div class="tl">';
+    var html = '<h2>'+r.serial+' <span class="badge stage">Current stage: '+r.currentStage+'</span></h2><div class="tl">';
     r.history.forEach(function(h){
       html += '<div class="tl-item"><b>'+h.stage+'</b>' +
         '<div class="meta">'+h.workerName+' ('+h.workerId+') · '+h.time+' · '+h.mode+'</div></div>';
@@ -243,7 +243,7 @@ function loadDashboard(){
       stat(r.totalBatteries,'Total batteries') +
       stat(r.completed,'Completed') +
       stat(r.totalBatteries - r.completed,'In production') +
-      stat(r.todayScans,'Aaj ke scans');
+      stat(r.todayScans,"Today's scans");
     document.querySelector('#wipTable tbody').innerHTML = r.stages.map(function(s){
       return '<tr><td>'+s+'</td><td><b>'+(r.wip[s]||0)+'</b></td></tr>';
     }).join('');
@@ -251,7 +251,7 @@ function loadDashboard(){
     wt.innerHTML = r.workersToday.length ? r.workersToday.map(function(w){
       var by = Object.keys(w.byStage).map(function(s){ return s+': <b>'+w.byStage[s]+'</b>'; }).join(' · ');
       return '<tr><td>'+w.name+'</td><td>'+by+'</td><td><b>'+w.total+'</b></td></tr>';
-    }).join('') : '<tr><td colspan="3" class="hint">Aaj abhi koi entry nahi</td></tr>';
+    }).join('') : '<tr><td colspan="3" class="hint">No entries yet today</td></tr>';
   });
 }
 function stat(n,l){ return '<div class="stat"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>'; }
@@ -273,14 +273,14 @@ function refreshAdmin(){
 function renderAdmin(r){
   document.querySelector('#adminWorkers tbody').innerHTML = r.workers.map(function(w){
     return '<tr><td>'+w.id+'</td><td>'+w.name+'</td><td>'+(w.defaultStage||'-')+'</td>' +
-      '<td><span class="badge '+(w.active?'on':'off')+'">'+(w.active?'Active':'Off')+'</span></td>' +
-      '<td><button class="btn ghost sm" onclick="toggleWorker(\''+w.id+'\')">'+(w.active?'Off karo':'On karo')+'</button></td></tr>';
+      '<td><span class="badge '+(w.active?'on':'off')+'">'+(w.active?'Active':'Inactive')+'</span></td>' +
+      '<td><button class="btn ghost sm" onclick="toggleWorker(\''+w.id+'\')">'+(w.active?'Deactivate':'Activate')+'</button></td></tr>';
   }).join('');
   document.querySelector('#adminStages tbody').innerHTML = r.stages.map(function(s){
     var on = String(s.active).toUpperCase()==='YES';
     return '<tr><td>'+s.order+'</td><td>'+s.name+'</td>' +
-      '<td><span class="badge '+(on?'on':'off')+'">'+(on?'Active':'Off')+'</span></td>' +
-      '<td><button class="btn ghost sm" onclick="toggleStage(\''+s.name.replace(/'/g,"\\'")+'\')">'+(on?'Off karo':'On karo')+'</button></td></tr>';
+      '<td><span class="badge '+(on?'on':'off')+'">'+(on?'Active':'Inactive')+'</span></td>' +
+      '<td><button class="btn ghost sm" onclick="toggleStage(\''+s.name.replace(/'/g,"\\'")+'\')">'+(on?'Deactivate':'Activate')+'</button></td></tr>';
   }).join('');
   document.querySelector('#adminSettings tbody').innerHTML = Object.keys(r.settings).map(function(k){
     return '<tr><td>'+k+'</td><td><input id="set_'+k+'" value="'+String(r.settings[k]).replace(/"/g,'&quot;')+'" style="padding:6px 8px;font-size:13px"></td>' +
