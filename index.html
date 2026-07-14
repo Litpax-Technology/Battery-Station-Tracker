@@ -24,6 +24,7 @@
       <button class="active" onclick="showTab('station',this)">📷 Scan Station</button>
       <button onclick="showTab('search',this)">🔍 Battery Search</button>
       <button onclick="showTab('dash',this)">📊 Dashboard</button>
+      <button onclick="showTab('emp',this)">👥 Employees</button>
       <button onclick="showTab('admin',this)">⚙️ Admin</button>
     </div>
     <div class="spacer"></div>
@@ -138,6 +139,35 @@
     <div class="card">
       <h2>Today's employee output</h2>
       <table id="workerTable"><thead><tr><th>Employee</th><th>By stage</th><th>Total</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <!-- ============ EMPLOYEES ============ -->
+  <div class="tab" id="tab-emp">
+    <div class="pagehead" style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
+      <div>
+        <h1>Employee Performance</h1>
+        <p>Output and working pace, calculated from scan records</p>
+      </div>
+      <select id="empPeriod" style="max-width:150px" onchange="loadEmployeeStats()">
+        <option value="1">Today</option>
+        <option value="7" selected>Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="0">All time</option>
+      </select>
+    </div>
+    <div class="card">
+      <table id="empTable">
+        <thead><tr>
+          <th>Employee</th><th>Total output</th><th>Days worked</th>
+          <th>Avg / day</th><th>Output by stage</th><th>Avg pace</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="hint" style="margin-top:12px">
+        Pace = average time between consecutive scans at the same stage. Gaps longer than
+        30 minutes are treated as breaks and excluded. Shown only when at least 3 readings exist.
+      </p>
     </div>
   </div>
 
