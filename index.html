@@ -3,164 +3,193 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Litpax Battery Station Tracker</title>
+<title>Battery Station Tracker — Litpax Technology</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 </head>
 <body>
 <div id="loader"></div>
 
-<header>
-  <h1>🔋 Battery Station Tracker</h1>
-  <span class="co" id="coName">Litpax Technology</span>
-  <span id="workerChip"><b id="wName"></b><span class="stg" id="wStage"></span>
-    <button id="logoutBtn" onclick="logout()">✕</button></span>
-</header>
+<div class="app">
 
-<nav>
-  <button class="active" onclick="showTab('station',this)">📷 Station</button>
-  <button onclick="showTab('search',this)">🔍 Battery Search</button>
-  <button onclick="showTab('dash',this)">📊 Dashboard</button>
-  <button onclick="showTab('admin',this)">⚙️ Admin</button>
-</nav>
+  <!-- ============ Sidebar ============ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">🔋 Litpax</div>
+      <div class="sub" id="coName">Battery Station Tracker</div>
+    </div>
+    <div class="nav">
+      <button class="active" onclick="showTab('station',this)">📷 Scan Station</button>
+      <button onclick="showTab('search',this)">🔍 Battery Search</button>
+      <button onclick="showTab('dash',this)">📊 Dashboard</button>
+      <button onclick="showTab('admin',this)">⚙️ Admin</button>
+    </div>
+    <div class="spacer"></div>
+    <div id="employeeChip">
+      <div class="nm" id="wName"></div>
+      <span class="st" id="wStage"></span><br>
+      <button class="out" onclick="logout()">Sign out</button>
+    </div>
+  </aside>
 
-<main>
+  <!-- ============ Content ============ -->
+  <main class="content">
 
-<!-- ============ STATION ============ -->
-<div class="tab active" id="tab-station">
+  <!-- ============ STATION ============ -->
+  <div class="tab active" id="tab-station">
+    <div class="pagehead">
+      <h1>Scan Station</h1>
+      <p>Track every battery through each production stage</p>
+    </div>
 
-  <!-- Login view -->
-  <div id="loginView">
-    <div class="card" style="text-align:center">
-      <h2>Worker Login</h2>
-      <p class="hint">Apna ID card scan karo — ya neeche se naam select karke PIN daalo</p>
-      <input id="loginScan" placeholder="🔎 ID scan karo..." autocomplete="off" style="max-width:380px;margin:14px auto;text-align:center;font-size:18px">
-      <div class="row" style="max-width:380px;margin:0 auto">
-        <select id="loginWorker"></select>
-        <input id="loginPin" type="password" placeholder="PIN" style="max-width:110px">
-        <button class="btn" onclick="pinLogin()">Login</button>
+    <!-- Login view -->
+    <div id="loginView">
+      <div class="card" style="text-align:center;max-width:520px;margin:0 auto">
+        <h2>Employee Sign In</h2>
+        <p class="hint">Scan your employee ID card — or select your name and enter your PIN</p>
+        <input id="loginScan" placeholder="Scan employee ID…" autocomplete="off"
+               style="max-width:380px;margin:16px auto;text-align:center;font-size:17px">
+        <div class="row" style="max-width:400px;margin:0 auto">
+          <select id="loginWorker"></select>
+          <input id="loginPin" type="password" placeholder="PIN" style="max-width:100px">
+          <button class="btn" onclick="pinLogin()">Sign in</button>
+        </div>
+        <p id="loginMsg" class="hint" style="margin-top:10px;color:var(--err)"></p>
       </div>
-      <p id="loginMsg" class="hint" style="margin-top:10px;color:var(--err)"></p>
+    </div>
+
+    <!-- Scan view -->
+    <div id="scanView" style="display:none">
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+        <div>
+          <div class="counter" id="todayCount">0</div>
+          <div class="counter-label">Today's scans · <span id="stageLabel"></span></div>
+        </div>
+        <div style="text-align:right">
+          <label class="hint" style="display:block;margin-bottom:5px">Change stage</label>
+          <select id="stageSelect" style="min-width:180px" onchange="stageChanged()"></select>
+        </div>
+      </div>
+
+      <div id="scanZone">
+        <div class="zt">Scan a battery</div>
+        <p class="hint" style="margin-top:6px">Scan the barcode with the USB scanner, or type the serial number and press Enter.<br>
+        Scanning another employee ID switches the session automatically.</p>
+        <input id="scanInput" placeholder="SERIAL NUMBER" autocomplete="off">
+        <div id="scanMsg"></div>
+
+        <!-- Visible on the first stage only -->
+        <div id="genBox" style="display:none;margin-top:24px;padding-top:20px;border-top:1px solid var(--line)">
+          <select id="genCount" style="max-width:88px;display:inline-block;vertical-align:middle">
+            <option value="1">1</option><option value="5">5</option>
+            <option value="10">10</option><option value="25">25</option>
+          </select>
+          <button class="btn" onclick="generateBatteries()">＋ New Battery</button>
+          <p class="hint" style="margin-top:8px">Serial numbers are generated and registered automatically — just print the labels and apply them.</p>
+        </div>
+      </div>
+
+      <div class="card" id="labelCard" style="display:none;margin-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <h2 style="margin:0">New labels</h2>
+          <button class="btn" onclick="window.print()">🖨️ Print labels</button>
+        </div>
+        <div id="labelSheet"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2>Recent scans — this session</h2>
+        <ul id="recentList"><li class="hint" style="border:none">No scans yet</li></ul>
+      </div>
     </div>
   </div>
 
-  <!-- Scan view -->
-  <div id="scanView" style="display:none">
-    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+  <!-- ============ SEARCH ============ -->
+  <div class="tab" id="tab-search">
+    <div class="pagehead">
+      <h1>Battery Search</h1>
+      <p>View the complete journey of any battery</p>
+    </div>
+    <div class="card">
+      <div class="row">
+        <input id="searchSerial" placeholder="Enter serial number" style="flex:3">
+        <button class="btn" onclick="searchBattery()">Search</button>
+      </div>
+    </div>
+    <div class="card" id="searchResult" style="display:none"></div>
+  </div>
+
+  <!-- ============ DASHBOARD ============ -->
+  <div class="tab" id="tab-dash">
+    <div class="pagehead" style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
       <div>
-        <div class="counter" id="todayCount">0</div>
-        <div class="counter-label">Aaj ke scans — <span id="stageLabel"></span></div>
+        <h1>Dashboard</h1>
+        <p>Live production status and employee output</p>
       </div>
-      <div style="text-align:right">
-        <label class="hint">Stage badlo</label>
-        <select id="stageSelect" style="min-width:170px" onchange="stageChanged()"></select>
-      </div>
+      <button class="btn ghost sm" onclick="loadDashboard()">↻ Refresh</button>
     </div>
-
-    <div id="scanZone">
-      <div style="font-size:15px;font-weight:600">Battery scan karo</div>
-      <p class="hint">USB scanner se barcode scan karo — ya serial type karke Enter dabao.<br>
-      Naya worker ID scan hote hi session switch ho jayega.</p>
-      <input id="scanInput" placeholder="SERIAL NUMBER" autocomplete="off">
-      <div id="scanMsg"></div>
-
-      <!-- Sirf pehle stage pe dikhta hai -->
-      <div id="genBox" style="display:none;margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">
-        <select id="genCount" style="max-width:90px;display:inline-block;vertical-align:middle">
-          <option value="1">1</option><option value="5">5</option>
-          <option value="10">10</option><option value="25">25</option>
-        </select>
-        <button class="btn" onclick="generateBatteries()">➕ Nayi Battery banao</button>
-        <p class="hint" style="margin-top:8px">Serial auto-generate hoga, register + is stage pe log bhi — bas label print karke chipka do</p>
-      </div>
-    </div>
-
-    <div class="card" id="labelCard" style="display:none;margin-top:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-        <h2 style="margin:0">Naye labels</h2>
-        <button class="btn" onclick="window.print()">🖨️ Print karo</button>
-      </div>
-      <div id="labelSheet"></div>
-    </div>
-
+    <div class="statgrid" id="dashStats"></div>
     <div class="card" style="margin-top:16px">
-      <h2>Recent scans (is session ke)</h2>
-      <ul id="recentList"><li class="hint" style="border:none">Abhi koi scan nahi</li></ul>
+      <h2>Work in progress by stage</h2>
+      <table id="wipTable"><thead><tr><th>Stage</th><th>Batteries</th></tr></thead><tbody></tbody></table>
     </div>
-  </div>
-</div>
-
-<!-- ============ SEARCH ============ -->
-<div class="tab" id="tab-search">
-  <div class="card">
-    <h2>Battery ki poori journey dekho</h2>
-    <div class="row">
-      <input id="searchSerial" placeholder="Serial number" style="flex:3">
-      <button class="btn" onclick="searchBattery()">Search</button>
-    </div>
-  </div>
-  <div class="card" id="searchResult" style="display:none"></div>
-</div>
-
-<!-- ============ DASHBOARD ============ -->
-<div class="tab" id="tab-dash">
-  <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-    <button class="btn ghost sm" onclick="loadDashboard()">🔄 Refresh</button>
-  </div>
-  <div class="statgrid" id="dashStats"></div>
-  <div class="card" style="margin-top:16px">
-    <h2>Stage-wise WIP (abhi kahan kitni batteries hain)</h2>
-    <table id="wipTable"><thead><tr><th>Stage</th><th>Batteries</th></tr></thead><tbody></tbody></table>
-  </div>
-  <div class="card">
-    <h2>Aaj ka worker output</h2>
-    <table id="workerTable"><thead><tr><th>Worker</th><th>Stage-wise</th><th>Total</th></tr></thead><tbody></tbody></table>
-  </div>
-</div>
-
-<!-- ============ ADMIN ============ -->
-<div class="tab" id="tab-admin">
-  <div class="card" id="adminLogin">
-    <h2>Admin Panel</h2>
-    <div class="row" style="max-width:340px">
-      <input id="adminPin" type="password" placeholder="Admin PIN">
-      <button class="btn" onclick="adminVerify()">Open</button>
-    </div>
-    <p id="adminMsg" class="hint" style="margin-top:8px;color:var(--err)"></p>
-  </div>
-
-  <div id="adminPanel" style="display:none">
     <div class="card">
-      <h2>👷 Workers</h2>
-      <table id="adminWorkers"><thead><tr><th>ID</th><th>Naam</th><th>Default Stage</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="row" style="margin-top:14px">
-        <input id="nwId" placeholder="Worker ID (jaise W-102)">
-        <input id="nwName" placeholder="Naam">
-        <select id="nwStage"></select>
-        <input id="nwPin" placeholder="PIN" style="max-width:90px">
-        <button class="btn" onclick="addWorker()">+ Add</button>
+      <h2>Today's employee output</h2>
+      <table id="workerTable"><thead><tr><th>Employee</th><th>By stage</th><th>Total</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <!-- ============ ADMIN ============ -->
+  <div class="tab" id="tab-admin">
+    <div class="pagehead">
+      <h1>Admin</h1>
+      <p>Manage employees, stages and system settings</p>
+    </div>
+
+    <div class="card" id="adminLogin" style="max-width:420px">
+      <h2>Admin access</h2>
+      <div class="row">
+        <input id="adminPin" type="password" placeholder="Admin PIN">
+        <button class="btn" onclick="adminVerify()">Unlock</button>
+      </div>
+      <p id="adminMsg" class="hint" style="margin-top:8px;color:var(--err)"></p>
+    </div>
+
+    <div id="adminPanel" style="display:none">
+      <div class="card">
+        <h2>Employees</h2>
+        <table id="adminWorkers"><thead><tr><th>ID</th><th>Name</th><th>Default stage</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+        <div class="row" style="margin-top:14px">
+          <input id="nwId" placeholder="Employee ID (e.g. W-102)">
+          <input id="nwName" placeholder="Full name">
+          <select id="nwStage"></select>
+          <input id="nwPin" placeholder="PIN" style="max-width:90px">
+          <button class="btn" onclick="addWorker()">+ Add employee</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Stages</h2>
+        <table id="adminStages"><thead><tr><th>Order</th><th>Stage</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+        <div class="row" style="margin-top:14px">
+          <input id="nsOrder" type="number" placeholder="Order" style="max-width:90px">
+          <input id="nsName" placeholder="Stage name">
+          <button class="btn" onclick="addStage()">+ Add stage</button>
+        </div>
+        <p class="hint" style="margin-top:8px">Deactivating a stage removes it from the flow — historical data stays intact.</p>
+      </div>
+
+      <div class="card">
+        <h2>Settings</h2>
+        <table id="adminSettings"><thead><tr><th>Setting</th><th>Value</th><th></th></tr></thead><tbody></tbody></table>
       </div>
     </div>
-
-    <div class="card">
-      <h2>🏭 Stages</h2>
-      <table id="adminStages"><thead><tr><th>Order</th><th>Stage</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="row" style="margin-top:14px">
-        <input id="nsOrder" type="number" placeholder="Order" style="max-width:90px">
-        <input id="nsName" placeholder="Stage ka naam">
-        <button class="btn" onclick="addStage()">+ Add</button>
-      </div>
-      <p class="hint" style="margin-top:8px">Stage off karne se woh flow se hat jata hai — purana data safe rehta hai.</p>
-    </div>
-
-    <div class="card">
-      <h2>⚙️ Settings</h2>
-      <table id="adminSettings"><thead><tr><th>Setting</th><th>Value</th><th></th></tr></thead><tbody></tbody></table>
-    </div>
   </div>
-</div>
 
-</main>
+  </main>
+</div>
 
 <script src="config.js"></script>
 <script src="app.js"></script>
