@@ -1,7 +1,11 @@
-var CONFIG = { settings:{WorkerIdPrefix:'W-'}, stages:[], workers:[] };
-var SESSION = null;           // {id, name, stage}
+/* Battery Station Tracker — employee app
+ * Screens: Scan Station (sign in + scanning + new battery labels) and My Dashboard.
+ * All configuration comes from the backend (getConfig) — nothing hardcoded here. */
+
+var CONFIG = { settings:{WorkerIdPrefix:'W-'}, halls:[], stages:[], workers:[] };
+var HALL = '';                // selected hall
+var SESSION = null;           // {id, name, hall, stage}
 var sessionScans = [];
-var ADMIN_PIN = '';
 
 /* ---------- JSONP helper ---------- */
 var jsonpCount = 0;
@@ -40,29 +44,51 @@ function loadConfig(){
   api({action:'getConfig'}, function(r){
     if(!r.ok) return;
     CONFIG = r;
-    document.getElementById('coName').textContent = r.settings.CompanyName || '';
-    var wSel = document.getElementById('loginWorker');
-    wSel.innerHTML = '<option value="">— Select employee —</option>' +
-      r.workers.map(function(w){ return '<option value="'+w.id+'">'+w.name+' ('+w.id+')</option>'; }).join('');
-    var opts = r.stages.map(function(s){ return '<option>'+s.name+'</option>'; }).join('');
-    document.getElementById('stageSelect').innerHTML = opts;
-    document.getElementById('nwStage').innerHTML = '<option value="">Default stage</option>'+opts;
+    document.getElementById('hallButtons').innerHTML = r.halls.map(function(h){
+      return '<button class="btn" style="min-width:160px;padding:16px" onclick="selectHall(\''+h.replace(/'/g,"\\'")+'\')">'+h+'</button>';
+    }).join('');
   });
 }
 loadConfig();
 
+/* ---------- Hall selection ---------- */
+function hallStages(){
+  return CONFIG.stages.filter(function(s){
+    return s.hall.toUpperCase() === HALL.toUpperCase();
+  }).map(function(s){ return s.name; });
+}
+function selectHall(h){
+  HALL = h;
+  document.getElementById('hallBadge').textContent = h;
+  var wSel = document.getElementById('loginWorker');
+  wSel.innerHTML = '<option value="">— Select employee —</option>' +
+    CONFIG.workers.filter(function(w){
+      return (w.hall||'').toUpperCase() === h.toUpperCase();
+    }).map(function(w){ return '<option value="'+w.id+'">'+w.name+' ('+w.id+')</option>'; }).join('');
+  document.getElementById('stageSelect').innerHTML =
+    hallStages().map(function(s){ return '<option>'+s+'</option>'; }).join('');
+  document.getElementById('hallView').style.display='none';
+  document.getElementById('loginView').style.display='block';
+  focusScan();
+}
+function changeHall(){
+  HALL = '';
+  setLoginMsg('');
+  document.getElementById('loginView').style.display='none';
+  document.getElementById('hallView').style.display='block';
+}
+
 /* ---------- Tabs ---------- */
 function showTab(id, btn){
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
-  document.querySelectorAll('nav button').forEach(function(b){b.classList.remove('active')});
+  document.querySelectorAll('.nav button').forEach(function(b){b.classList.remove('active')});
   document.getElementById('tab-'+id).classList.add('active');
   btn.classList.add('active');
-  if(id==='dash') loadDashboard();
-  if(id==='emp') loadEmployeeStats();
+  if(id==='my') loadMyStats();
   if(id==='station') focusScan();
 }
 
-/* ---------- Login ---------- */
+/* ---------- Sign in / session ---------- */
 document.getElementById('loginScan').addEventListener('keydown', function(e){
   if(e.key!=='Enter') return;
   var v = this.value.trim(); this.value='';
@@ -76,7 +102,7 @@ function pinLogin(){
   doLogin(id, pin);
 }
 function doLogin(id, pin){
-  var p = {action:'login', workerId:id};
+  var p = {action:'login', workerId:id, hall:HALL};
   if(pin!==null){ p.mode='pin'; p.pin=pin; }
   api(p, function(r){
     if(!r.ok){ beep(false); return setLoginMsg(r.error); }
@@ -86,17 +112,21 @@ function doLogin(id, pin){
 function setLoginMsg(m){ document.getElementById('loginMsg').textContent = m; }
 
 function startSession(w){
-  SESSION = { id:w.id, name:w.name, stage:'' };
+  if(w.hall) HALL = w.hall; // employee's own hall always wins
+  SESSION = { id:w.id, name:w.name, hall:HALL, stage:'' };
   sessionScans = [];
   var sel = document.getElementById('stageSelect');
-  var stages = CONFIG.stages.map(function(s){return s.name;});
+  var stages = hallStages();
+  sel.innerHTML = stages.map(function(s){ return '<option>'+s+'</option>'; }).join('');
   SESSION.stage = stages.indexOf(w.defaultStage) !== -1 ? w.defaultStage : (stages[0]||'');
   sel.value = SESSION.stage;
 
+  document.getElementById('hallView').style.display='none';
   document.getElementById('loginView').style.display='none';
   document.getElementById('scanView').style.display='block';
-  document.getElementById('employeeChip').style.display='inline-flex';
+  document.getElementById('employeeChip').style.display='block';
   document.getElementById('wName').textContent = w.name;
+  document.getElementById('wHall').textContent = HALL;
   document.getElementById('wStage').textContent = SESSION.stage;
   document.getElementById('stageLabel').textContent = SESSION.stage;
   document.getElementById('todayCount').textContent = '0';
@@ -106,11 +136,14 @@ function startSession(w){
 }
 function logout(){
   SESSION = null;
+  HALL = '';
   document.getElementById('scanView').style.display='none';
-  document.getElementById('loginView').style.display='block';
+  document.getElementById('loginView').style.display='none';
+  document.getElementById('hallView').style.display='block';
   document.getElementById('employeeChip').style.display='none';
   document.getElementById('loginPin').value='';
   setLoginMsg('');
+  loadMyStats();
 }
 function stageChanged(){
   if(!SESSION) return;
@@ -122,7 +155,8 @@ function stageChanged(){
   focusScan();
 }
 function updateGenBox(){
-  var first = CONFIG.stages.length ? CONFIG.stages[0].name : '';
+  var stages = hallStages();
+  var first = stages.length ? stages[0] : '';
   document.getElementById('genBox').style.display =
     (SESSION && SESSION.stage === first) ? 'block' : 'none';
 }
@@ -138,8 +172,7 @@ document.getElementById('scanInput').addEventListener('keydown', function(e){
   if(!v) return;
   var prefix = (CONFIG.settings.WorkerIdPrefix||'W-').toUpperCase();
   if(v.toUpperCase().indexOf(prefix)===0){
-    // Worker ID scan hua — session switch
-    doSwitch(v);
+    doSwitch(v); // employee ID scanned — switch session
   } else {
     submitScan(v);
   }
@@ -153,7 +186,7 @@ function doSwitch(id){
 }
 function submitScan(serial){
   if(!SESSION) return;
-  api({action:'scan', serial:serial, stage:SESSION.stage, workerId:SESSION.id, mode:'scan'}, function(r){
+  api({action:'scan', serial:serial, stage:SESSION.stage, workerId:SESSION.id, hall:SESSION.hall, mode:'scan'}, function(r){
     if(r.ok){
       flash(true, '✔ ' + r.serial + ' saved');
       document.getElementById('todayCount').textContent = r.todayCount;
@@ -165,11 +198,30 @@ function submitScan(serial){
     }
   });
 }
-/* ---------- Nayi battery generate + labels ---------- */
+function flash(ok, msg){
+  beep(ok);
+  var z = document.getElementById('scanZone');
+  var m = document.getElementById('scanMsg');
+  m.textContent = msg; m.className = ok ? 'ok' : 'err';
+  z.classList.remove('flash-ok','flash-err');
+  void z.offsetWidth;
+  z.classList.add(ok ? 'flash-ok' : 'flash-err');
+  setTimeout(function(){ z.classList.remove('flash-ok','flash-err'); }, 900);
+  focusScan();
+}
+function renderRecent(){
+  var ul = document.getElementById('recentList');
+  if(!sessionScans.length){ ul.innerHTML = '<li class="hint" style="border:none">No scans yet</li>'; return; }
+  ul.innerHTML = sessionScans.map(function(s){
+    return '<li><b>'+s.serial+'</b><span class="t">'+s.time.toLocaleTimeString()+'</span></li>';
+  }).join('');
+}
+
+/* ---------- New battery + labels ---------- */
 function generateBatteries(){
   if(!SESSION) return;
   var count = document.getElementById('genCount').value;
-  api({action:'generate', workerId:SESSION.id, count:count}, function(r){
+  api({action:'generate', workerId:SESSION.id, hall:SESSION.hall, count:count}, function(r){
     if(!r.ok){ flash(false, r.error); return; }
     flash(true, '✔ ' + r.serials.length + ' new batteries created — labels below');
     document.getElementById('todayCount').textContent = r.todayCount;
@@ -197,138 +249,41 @@ function renderLabels(serials){
   card.scrollIntoView({behavior:'smooth'});
 }
 
-function flash(ok, msg){
-  beep(ok);
-  var z = document.getElementById('scanZone');
-  var m = document.getElementById('scanMsg');
-  m.textContent = msg; m.className = ok ? 'ok' : 'err';
-  z.classList.remove('flash-ok','flash-err');
-  void z.offsetWidth;
-  z.classList.add(ok ? 'flash-ok' : 'flash-err');
-  setTimeout(function(){ z.classList.remove('flash-ok','flash-err'); }, 900);
-  focusScan();
-}
-function renderRecent(){
-  var ul = document.getElementById('recentList');
-  if(!sessionScans.length){ ul.innerHTML = '<li class="hint" style="border:none">No scans yet</li>'; return; }
-  ul.innerHTML = sessionScans.map(function(s){
-    return '<li><b>'+s.serial+'</b><span class="t">'+s.time.toLocaleTimeString()+'</span></li>';
-  }).join('');
-}
+/* ---------- My Dashboard ---------- */
+function loadMyStats(){
+  var locked = document.getElementById('myLocked');
+  var stats = document.getElementById('myStats');
+  if(!SESSION){
+    locked.style.display='block'; stats.style.display='none';
+    return;
+  }
+  locked.style.display='none'; stats.style.display='block';
+  document.getElementById('myDashSub').textContent =
+    SESSION.name + ' (' + SESSION.id + ')';
 
-/* ---------- Search ---------- */
-function searchBattery(){
-  var serial = document.getElementById('searchSerial').value.trim();
-  if(!serial) return;
-  api({action:'timeline', serial:serial}, function(r){
-    var box = document.getElementById('searchResult');
-    box.style.display='block';
-    if(!r.ok){ box.innerHTML = '<p class="hint" style="color:var(--err)">'+r.error+'</p>'; return; }
-    var html = '<h2>'+r.serial+' <span class="badge stage">Current stage: '+r.currentStage+'</span></h2><div class="tl">';
-    r.history.forEach(function(h){
-      html += '<div class="tl-item"><b>'+h.stage+'</b>' +
-        '<div class="meta">'+h.workerName+' ('+h.workerId+') · '+h.time+' · '+h.mode+'</div></div>';
-    });
-    box.innerHTML = html + '</div>';
-  });
-}
-document.getElementById('searchSerial').addEventListener('keydown', function(e){
-  if(e.key==='Enter') searchBattery();
-});
-
-/* ---------- Dashboard ---------- */
-function loadDashboard(){
-  api({action:'dashboard'}, function(r){
-    if(!r.ok) return;
-    document.getElementById('dashStats').innerHTML =
-      stat(r.totalBatteries,'Total batteries') +
-      stat(r.completed,'Completed') +
-      stat(r.totalBatteries - r.completed,'In production') +
-      stat(r.todayScans,"Today's scans");
-    document.querySelector('#wipTable tbody').innerHTML = r.stages.map(function(s){
-      return '<tr><td>'+s+'</td><td><b>'+(r.wip[s]||0)+'</b></td></tr>';
+  var days = document.getElementById('myPeriod').value;
+  api({action:'employeeStats', days:days, workerId:SESSION.id}, function(r){
+    var cards = document.getElementById('myCards');
+    var tb = document.querySelector('#myTable tbody');
+    if(!r.ok){ tb.innerHTML = '<tr><td colspan="3" class="hint">'+r.error+'</td></tr>'; return; }
+    var me = r.employees[0];
+    if(!me){
+      cards.innerHTML = stat(0,'Total output') + stat(0,'Days worked') + stat(0,'Avg / day');
+      tb.innerHTML = '<tr><td colspan="3" class="hint">No activity in this period</td></tr>';
+      return;
+    }
+    cards.innerHTML =
+      stat(me.total,'Total output') +
+      stat(me.daysWorked,'Days worked') +
+      stat(me.avgPerDay,'Avg / day');
+    tb.innerHTML = Object.keys(me.byStage).map(function(st){
+      var pace = me.speed[st] !== undefined
+        ? '<b>'+me.speed[st]+'</b> min / battery'
+        : '<span class="hint">Not enough data</span>';
+      return '<tr><td>'+st+'</td><td><b>'+me.byStage[st]+'</b></td><td>'+pace+'</td></tr>';
     }).join('');
-    var wt = document.querySelector('#workerTable tbody');
-    wt.innerHTML = r.workersToday.length ? r.workersToday.map(function(w){
-      var by = Object.keys(w.byStage).map(function(s){ return s+': <b>'+w.byStage[s]+'</b>'; }).join(' · ');
-      return '<tr><td>'+w.name+'</td><td>'+by+'</td><td><b>'+w.total+'</b></td></tr>';
-    }).join('') : '<tr><td colspan="3" class="hint">No entries yet today</td></tr>';
   });
 }
 function stat(n,l){ return '<div class="stat"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>'; }
-
-/* ---------- Employee performance ---------- */
-function loadEmployeeStats(){
-  var days = document.getElementById('empPeriod').value;
-  api({action:'employeeStats', days:days}, function(r){
-    var tb = document.querySelector('#empTable tbody');
-    if(!r.ok){ tb.innerHTML = '<tr><td colspan="6" class="hint">'+r.error+'</td></tr>'; return; }
-    if(!r.employees.length){
-      tb.innerHTML = '<tr><td colspan="6" class="hint">No activity in this period</td></tr>';
-      return;
-    }
-    tb.innerHTML = r.employees.map(function(e){
-      var by = Object.keys(e.byStage).map(function(s){
-        return s+': <b>'+e.byStage[s]+'</b>';
-      }).join(' · ');
-      var sp = Object.keys(e.speed).length
-        ? Object.keys(e.speed).map(function(s){
-            return s+': <b>'+e.speed[s]+'</b> min';
-          }).join(' · ')
-        : '<span class="hint">Not enough data</span>';
-      return '<tr><td><b>'+e.name+'</b><br><span class="hint">'+e.id+'</span></td>' +
-        '<td><b>'+e.total+'</b></td><td>'+e.daysWorked+'</td><td>'+e.avgPerDay+'</td>' +
-        '<td>'+by+'</td><td>'+sp+'</td></tr>';
-    }).join('');
-  });
-}
-
-/* ---------- Admin ---------- */
-function adminVerify(){
-  var pin = document.getElementById('adminPin').value;
-  api({action:'admin', op:'verify', pin:pin}, function(r){
-    if(!r.ok){ document.getElementById('adminMsg').textContent = r.error; return; }
-    ADMIN_PIN = pin;
-    document.getElementById('adminLogin').style.display='none';
-    document.getElementById('adminPanel').style.display='block';
-    renderAdmin(r);
-  });
-}
-function refreshAdmin(){
-  api({action:'admin', op:'verify', pin:ADMIN_PIN}, function(r){ if(r.ok) renderAdmin(r); loadConfig(); });
-}
-function renderAdmin(r){
-  document.querySelector('#adminWorkers tbody').innerHTML = r.workers.map(function(w){
-    return '<tr><td>'+w.id+'</td><td>'+w.name+'</td><td>'+(w.defaultStage||'-')+'</td>' +
-      '<td><span class="badge '+(w.active?'on':'off')+'">'+(w.active?'Active':'Inactive')+'</span></td>' +
-      '<td><button class="btn ghost sm" onclick="toggleWorker(\''+w.id+'\')">'+(w.active?'Deactivate':'Activate')+'</button></td></tr>';
-  }).join('');
-  document.querySelector('#adminStages tbody').innerHTML = r.stages.map(function(s){
-    var on = String(s.active).toUpperCase()==='YES';
-    return '<tr><td>'+s.order+'</td><td>'+s.name+'</td>' +
-      '<td><span class="badge '+(on?'on':'off')+'">'+(on?'Active':'Inactive')+'</span></td>' +
-      '<td><button class="btn ghost sm" onclick="toggleStage(\''+s.name.replace(/'/g,"\\'")+'\')">'+(on?'Deactivate':'Activate')+'</button></td></tr>';
-  }).join('');
-  document.querySelector('#adminSettings tbody').innerHTML = Object.keys(r.settings).map(function(k){
-    return '<tr><td>'+k+'</td><td><input id="set_'+k+'" value="'+String(r.settings[k]).replace(/"/g,'&quot;')+'" style="padding:6px 8px;font-size:13px"></td>' +
-      '<td><button class="btn sm" onclick="saveSetting(\''+k+'\')">Save</button></td></tr>';
-  }).join('');
-}
-function addWorker(){
-  api({action:'admin', op:'addWorker', pin:ADMIN_PIN,
-       id:val('nwId'), name:val('nwName'), stage:val('nwStage'), workerPin:val('nwPin')},
-    function(r){ r.ok ? refreshAdmin() : alert(r.error); });
-}
-function toggleWorker(id){ api({action:'admin',op:'toggleWorker',pin:ADMIN_PIN,id:id}, function(r){ r.ok?refreshAdmin():alert(r.error); }); }
-function addStage(){
-  api({action:'admin', op:'addStage', pin:ADMIN_PIN, order:val('nsOrder'), name:val('nsName')},
-    function(r){ r.ok ? refreshAdmin() : alert(r.error); });
-}
-function toggleStage(name){ api({action:'admin',op:'toggleStage',pin:ADMIN_PIN,name:name}, function(r){ r.ok?refreshAdmin():alert(r.error); }); }
-function saveSetting(k){
-  api({action:'admin', op:'setSetting', pin:ADMIN_PIN, key:k, value:val('set_'+k)},
-    function(r){ r.ok ? refreshAdmin() : alert(r.error); });
-}
-function val(id){ return document.getElementById(id).value.trim(); }
 
 focusScan();
