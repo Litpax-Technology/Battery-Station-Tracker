@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Litpax Battery Station Tracker</title>
 <link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 </head>
 <body>
 <div id="loader"></div>
@@ -62,6 +63,24 @@
       Naya worker ID scan hote hi session switch ho jayega.</p>
       <input id="scanInput" placeholder="SERIAL NUMBER" autocomplete="off">
       <div id="scanMsg"></div>
+
+      <!-- Sirf pehle stage pe dikhta hai -->
+      <div id="genBox" style="display:none;margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">
+        <select id="genCount" style="max-width:90px;display:inline-block;vertical-align:middle">
+          <option value="1">1</option><option value="5">5</option>
+          <option value="10">10</option><option value="25">25</option>
+        </select>
+        <button class="btn" onclick="generateBatteries()">➕ Nayi Battery banao</button>
+        <p class="hint" style="margin-top:8px">Serial auto-generate hoga, register + is stage pe log bhi — bas label print karke chipka do</p>
+      </div>
+    </div>
+
+    <div class="card" id="labelCard" style="display:none;margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <h2 style="margin:0">Naye labels</h2>
+        <button class="btn" onclick="window.print()">🖨️ Print karo</button>
+      </div>
+      <div id="labelSheet"></div>
     </div>
 
     <div class="card" style="margin-top:16px">
