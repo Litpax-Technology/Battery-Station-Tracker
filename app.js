@@ -58,6 +58,7 @@ function showTab(id, btn){
   document.getElementById('tab-'+id).classList.add('active');
   btn.classList.add('active');
   if(id==='dash') loadDashboard();
+  if(id==='emp') loadEmployeeStats();
   if(id==='station') focusScan();
 }
 
@@ -255,6 +256,32 @@ function loadDashboard(){
   });
 }
 function stat(n,l){ return '<div class="stat"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>'; }
+
+/* ---------- Employee performance ---------- */
+function loadEmployeeStats(){
+  var days = document.getElementById('empPeriod').value;
+  api({action:'employeeStats', days:days}, function(r){
+    var tb = document.querySelector('#empTable tbody');
+    if(!r.ok){ tb.innerHTML = '<tr><td colspan="6" class="hint">'+r.error+'</td></tr>'; return; }
+    if(!r.employees.length){
+      tb.innerHTML = '<tr><td colspan="6" class="hint">No activity in this period</td></tr>';
+      return;
+    }
+    tb.innerHTML = r.employees.map(function(e){
+      var by = Object.keys(e.byStage).map(function(s){
+        return s+': <b>'+e.byStage[s]+'</b>';
+      }).join(' · ');
+      var sp = Object.keys(e.speed).length
+        ? Object.keys(e.speed).map(function(s){
+            return s+': <b>'+e.speed[s]+'</b> min';
+          }).join(' · ')
+        : '<span class="hint">Not enough data</span>';
+      return '<tr><td><b>'+e.name+'</b><br><span class="hint">'+e.id+'</span></td>' +
+        '<td><b>'+e.total+'</b></td><td>'+e.daysWorked+'</td><td>'+e.avgPerDay+'</td>' +
+        '<td>'+by+'</td><td>'+sp+'</td></tr>';
+    }).join('');
+  });
+}
 
 /* ---------- Admin ---------- */
 function adminVerify(){
