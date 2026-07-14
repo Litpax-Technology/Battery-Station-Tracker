@@ -100,6 +100,7 @@ function startSession(w){
   document.getElementById('stageLabel').textContent = SESSION.stage;
   document.getElementById('todayCount').textContent = '0';
   renderRecent();
+  updateGenBox();
   focusScan();
 }
 function logout(){
@@ -116,7 +117,13 @@ function stageChanged(){
   document.getElementById('wStage').textContent = SESSION.stage;
   document.getElementById('stageLabel').textContent = SESSION.stage;
   document.getElementById('todayCount').textContent = '0';
+  updateGenBox();
   focusScan();
+}
+function updateGenBox(){
+  var first = CONFIG.stages.length ? CONFIG.stages[0].name : '';
+  document.getElementById('genBox').style.display =
+    (SESSION && SESSION.stage === first) ? 'block' : 'none';
 }
 function focusScan(){
   var el = SESSION ? document.getElementById('scanInput') : document.getElementById('loginScan');
@@ -157,6 +164,38 @@ function submitScan(serial){
     }
   });
 }
+/* ---------- Nayi battery generate + labels ---------- */
+function generateBatteries(){
+  if(!SESSION) return;
+  var count = document.getElementById('genCount').value;
+  api({action:'generate', workerId:SESSION.id, count:count}, function(r){
+    if(!r.ok){ flash(false, r.error); return; }
+    flash(true, '✔ ' + r.serials.length + ' nayi battery — labels neeche');
+    document.getElementById('todayCount').textContent = r.todayCount;
+    r.serials.forEach(function(sn){
+      sessionScans.unshift({serial:sn, time:new Date()});
+    });
+    while(sessionScans.length>15) sessionScans.pop();
+    renderRecent();
+    renderLabels(r.serials);
+  });
+}
+function renderLabels(serials){
+  var card = document.getElementById('labelCard');
+  var sheet = document.getElementById('labelSheet');
+  card.style.display='block';
+  sheet.innerHTML = serials.map(function(sn){
+    return '<div class="label"><svg class="bc" data-sn="'+sn+'"></svg></div>';
+  }).join('');
+  sheet.querySelectorAll('svg.bc').forEach(function(el){
+    try{
+      JsBarcode(el, el.getAttribute('data-sn'),
+        {format:'CODE128', width:2, height:52, fontSize:14, margin:6, displayValue:true});
+    }catch(e){}
+  });
+  card.scrollIntoView({behavior:'smooth'});
+}
+
 function flash(ok, msg){
   beep(ok);
   var z = document.getElementById('scanZone');
