@@ -321,6 +321,17 @@ function generateBatteries(){
     renderLabels(r);
   });
 }
+function reprintLabels(){
+  var id = document.getElementById('reprintId').value.trim();
+  if(!id) return;
+  api({action:'reprint', id:id}, function(r){
+    if(!r.ok){ flash(false, r.error); return; }
+    flash(true, '✔ ' + r.serials.length + ' label(s) ready below — reprint only, nothing new created');
+    document.getElementById('reprintId').value = '';
+    renderLabels(r);
+  });
+}
+
 function qr(el, text, size){
   try{ new QRCode(el, {text:text, width:size, height:size,
     correctLevel: QRCode.CorrectLevel.M}); }catch(e){}
