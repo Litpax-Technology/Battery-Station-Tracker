@@ -192,13 +192,71 @@ document.getElementById('scanInput').addEventListener('keydown', function(e){
   if(e.key!=='Enter') return;
   var v = this.value.trim(); this.value='';
   if(!v) return;
-  var prefix = (CONFIG.settings.WorkerIdPrefix||'W-').toUpperCase();
-  if(v.toUpperCase().indexOf(prefix)===0){
-    doSwitch(v); // employee ID scanned — switch session
-  } else {
-    submitScan(v);
-  }
+  handleScanValue(v);
 });
+function handleScanValue(v){
+  var wPrefix = (CONFIG.settings.WorkerIdPrefix||'W-').toUpperCase();
+  var bPrefix = (CONFIG.settings.BatchIdPrefix||'B-').toUpperCase();
+  var V = v.toUpperCase();
+  if(V.indexOf(wPrefix)===0){
+    doSwitch(v);              // employee ID — session switch
+  } else if(V.indexOf(bPrefix)===0){
+    submitBatch(v);           // batch label — poore batch ki entry
+  } else {
+    submitScan(v);            // single battery
+  }
+}
+function submitBatch(batchId){
+  if(!SESSION) return;
+  api({action:'batchScan', batchId:batchId, stage:SESSION.stage,
+       workerId:SESSION.id, hall:SESSION.hall}, function(r){
+    var skipBox = document.getElementById('skipList');
+    if(!r.ok){ skipBox.innerHTML=''; flash(false, '✖ ' + batchId + ' — ' + r.error); return; }
+    var msg = '✔ ' + batchId + ': ' + r.saved + ' saved';
+    if(r.skipped.length) msg += ', ' + r.skipped.length + ' skipped';
+    flash(r.saved > 0, msg);
+    skipBox.innerHTML = r.skipped.length
+      ? '<b>Skipped:</b> ' + r.skipped.map(function(x){
+          return x.serial + ' (' + x.reason + ')';
+        }).join(' · ')
+      : '';
+    document.getElementById('todayCount').textContent = r.todayCount;
+    if(r.target) renderTarget(r.target);
+    if(r.saved > 0){
+      sessionScans.unshift({serial: batchId + ' × ' + r.saved, time: new Date()});
+      while(sessionScans.length>15) sessionScans.pop();
+      renderRecent();
+    }
+  });
+}
+
+/* ---------- Camera scanning (phone) ---------- */
+var CAM = null, lastCamValue = '', lastCamTime = 0;
+function toggleCam(){
+  var box = document.getElementById('camBox');
+  var btn = document.getElementById('camBtn');
+  if(CAM){
+    CAM.stop().then(function(){ CAM.clear(); }).catch(function(){});
+    CAM = null; box.style.display='none'; box.innerHTML='';
+    btn.textContent = '📷 Camera scan';
+    focusScan();
+    return;
+  }
+  if(typeof Html5Qrcode === 'undefined'){ flash(false,'Camera library not loaded'); return; }
+  box.style.display='block';
+  box.innerHTML = '<div id="camReader"></div>';
+  CAM = new Html5Qrcode('camReader');
+  CAM.start({ facingMode:'environment' }, { fps:10, qrbox:{width:220,height:220} },
+    function(text){
+      var now = Date.now();
+      if(text === lastCamValue && now - lastCamTime < 3000) return; // duplicate frame guard
+      lastCamValue = text; lastCamTime = now;
+      handleScanValue(text.trim());
+    }, function(){}
+  ).then(function(){ btn.textContent = '⏹ Stop camera'; })
+   .catch(function(){ flash(false,'Camera could not start — allow camera permission');
+     box.style.display='none'; CAM = null; });
+}
 function doSwitch(id){
   api({action:'login', workerId:id}, function(r){
     if(!r.ok){ flash(false, r.error); return; }
@@ -208,6 +266,7 @@ function doSwitch(id){
 }
 function submitScan(serial){
   if(!SESSION) return;
+  document.getElementById('skipList').innerHTML='';
   api({action:'scan', serial:serial, stage:SESSION.stage, workerId:SESSION.id, hall:SESSION.hall, mode:'scan'}, function(r){
     if(r.ok){
       flash(true, '✔ ' + r.serial + ' saved');
@@ -243,7 +302,7 @@ function renderRecent(){
 /* ---------- New battery + labels ---------- */
 function generateBatteries(){
   if(!SESSION) return;
-  var count = document.getElementById('genCount').value;
+  var count = Math.max(1, Math.min(100, Number(document.getElementById('genCount').value)||1));
   var modelSel = document.getElementById('genModel');
   var model = modelSel.style.display === 'none' ? '' : modelSel.value;
   if(modelSel.style.display !== 'none' && !model){
@@ -259,22 +318,42 @@ function generateBatteries(){
     });
     while(sessionScans.length>15) sessionScans.pop();
     renderRecent();
-    renderLabels(r.serials);
+    renderLabels(r);
   });
 }
-function renderLabels(serials){
+function qr(el, text, size){
+  try{ new QRCode(el, {text:text, width:size, height:size,
+    correctLevel: QRCode.CorrectLevel.M}); }catch(e){}
+}
+function renderLabels(r){
   var card = document.getElementById('labelCard');
   var sheet = document.getElementById('labelSheet');
   card.style.display='block';
-  sheet.innerHTML = serials.map(function(sn){
-    return '<div class="label"><svg class="bc" data-sn="'+sn+'"></svg></div>';
-  }).join('');
-  sheet.querySelectorAll('svg.bc').forEach(function(el){
-    try{
-      JsBarcode(el, el.getAttribute('data-sn'),
-        {format:'CODE128', width:2, height:52, fontSize:14, margin:6, displayValue:true});
-    }catch(e){}
+  sheet.innerHTML = '';
+
+  // Batch label (tray ke liye) — sirf multi-qty pe
+  if(r.batchId){
+    var b = document.createElement('div');
+    b.className = 'label label-batch';
+    b.innerHTML = '<div class="qrbox"></div>' +
+      '<div class="lbl-title">'+r.batchId+'</div>' +
+      '<div class="lbl-meta">'+(r.model||'')+' · Qty '+r.serials.length+'<br>' +
+      r.serials[0]+' → '+r.serials[r.serials.length-1]+'<br>' +
+      new Date().toLocaleDateString()+'</div>';
+    sheet.appendChild(b);
+    qr(b.querySelector('.qrbox'), r.batchId, 110);
+  }
+
+  // Har battery ka apna label
+  r.serials.forEach(function(sn){
+    var d = document.createElement('div');
+    d.className = 'label';
+    d.innerHTML = '<div class="qrbox"></div><div class="lbl-title">'+sn+'</div>' +
+      '<div class="lbl-meta">'+(r.model||'')+'</div>';
+    sheet.appendChild(d);
+    qr(d.querySelector('.qrbox'), sn, 84);
   });
+
   card.scrollIntoView({behavior:'smooth'});
 }
 
