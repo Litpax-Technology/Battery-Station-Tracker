@@ -104,9 +104,15 @@ td{padding:10px;border-top:1px solid var(--line)}
 .progress-fill{height:100%;background:var(--accent);border-radius:999px;width:0%;transition:width .4s}
 
 /* ===================== Barcode labels ===================== */
-#labelSheet{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:14px}
-.label{border:1px dashed var(--line);border-radius:8px;padding:10px;text-align:center;background:#fff}
-.label svg{max-width:100%}
+#labelSheet{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:14px}
+.label{border:1px dashed var(--line);border-radius:8px;padding:12px 8px;text-align:center;background:#fff}
+.label .qrbox{display:flex;justify-content:center}
+.label .qrbox img, .label .qrbox canvas{margin:0 auto}
+.lbl-title{font-weight:700;font-size:13px;margin-top:8px;letter-spacing:.5px}
+.lbl-meta{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.5}
+.label-batch{border:2px solid var(--indigo);grid-column:1 / -1;max-width:260px}
+.label-batch .lbl-title{font-size:16px}
+#camBox{border:1px solid var(--line);border-radius:12px;overflow:hidden}
 @media print{
   body *{visibility:hidden}
   #labelSheet, #labelSheet *{visibility:visible}
