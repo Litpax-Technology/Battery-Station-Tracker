@@ -7,7 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
 <div id="loader"></div>
@@ -93,18 +94,21 @@
         <div class="zt">Scan a battery</div>
         <p class="hint" style="margin-top:6px">Scan the barcode with the USB scanner, or type the serial number and press Enter.<br>
         Scanning another employee ID switches the session automatically.</p>
-        <input id="scanInput" placeholder="SERIAL NUMBER" autocomplete="off">
+        <input id="scanInput" placeholder="SERIAL / BATCH / EMPLOYEE ID" autocomplete="off">
+        <div style="margin-top:10px">
+          <button class="btn ghost sm" id="camBtn" onclick="toggleCam()">📷 Camera scan</button>
+        </div>
+        <div id="camBox" style="max-width:340px;margin:12px auto;display:none"></div>
         <div id="scanMsg"></div>
+        <div id="skipList" class="hint" style="text-align:left;max-width:440px;margin:6px auto"></div>
 
         <!-- Visible on the first stage only -->
         <div id="genBox" style="display:none;margin-top:24px;padding-top:20px;border-top:1px solid var(--line)">
           <select id="genModel" style="max-width:190px;display:inline-block;vertical-align:middle"></select>
-          <select id="genCount" style="max-width:88px;display:inline-block;vertical-align:middle">
-            <option value="1">1</option><option value="5">5</option>
-            <option value="10">10</option><option value="25">25</option>
-          </select>
+          <input id="genCount" type="number" min="1" max="100" value="1"
+                 style="max-width:88px;display:inline-block;vertical-align:middle" title="Quantity (1-100)">
           <button class="btn" onclick="generateBatteries()">＋ New Battery</button>
-          <p class="hint" style="margin-top:8px">Serial numbers are generated and registered automatically — just print the labels and apply them.</p>
+          <p class="hint" style="margin-top:8px">Qty 1 = single label. Qty 2+ = a batch: one batch QR for the tray + individual QR labels for each battery.</p>
         </div>
       </div>
 
