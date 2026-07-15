@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 </head>
 <body>
 <div id="loader"></div>
@@ -63,6 +64,7 @@
       <div><h1>WIP Board</h1><p>Where batteries are sitting, and for how long</p></div>
       <button class="btn ghost sm" onclick="loadWip()">↻ Refresh</button>
     </div>
+    <div class="card"><canvas id="wipChart" height="110"></canvas></div>
     <div class="card">
       <table id="wipTable">
         <thead><tr><th>Hall</th><th>Stage</th><th>Batteries</th><th>Oldest waiting</th></tr></thead>
@@ -84,11 +86,15 @@
       </select>
     </div>
     <div class="card">
+      <input id="empSearch" placeholder="🔍 Search employee by name or ID…" oninput="filterEmp()">
+    </div>
+    <div class="card" id="empDetail" style="display:none"></div>
+    <div class="card">
       <table id="empTable">
         <thead><tr><th>Employee</th><th>Total</th><th>Days</th><th>Avg/day</th><th>By stage</th><th>Avg pace</th></tr></thead>
         <tbody></tbody>
       </table>
-      <p class="hint" style="margin-top:12px">Pace = average time between consecutive scans at a stage; gaps over 30 minutes are treated as breaks. Shown after at least 3 readings.</p>
+      <p class="hint" style="margin-top:12px">Click any employee to see their daily trend. Pace = average time between consecutive scans at a stage; gaps over 30 minutes are treated as breaks. Shown after at least 3 readings.</p>
     </div>
   </div>
 
@@ -103,7 +109,8 @@
       </select>
     </div>
     <div class="statgrid" id="histTotals"></div>
-    <div class="card" style="margin-top:16px">
+    <div class="card" style="margin-top:16px"><canvas id="histChart" height="110"></canvas></div>
+    <div class="card">
       <h2>Day-wise detail</h2>
       <table id="histTable">
         <thead><tr><th>Date</th><th>Hall</th><th>Model</th><th>Planned</th><th>Achieved</th><th>Progress</th></tr></thead>
