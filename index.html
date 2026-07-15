@@ -81,6 +81,14 @@
         </div>
       </div>
 
+      <div class="card" id="targetCard" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+          <h2 style="margin:0">Today's target — <span id="tgtHall"></span></h2>
+          <span style="font-weight:700;color:var(--indigo)" id="tgtNums"></span>
+        </div>
+        <div class="progress"><div class="progress-fill" id="tgtFill"></div></div>
+      </div>
+
       <div id="scanZone">
         <div class="zt">Scan a battery</div>
         <p class="hint" style="margin-top:6px">Scan the barcode with the USB scanner, or type the serial number and press Enter.<br>
@@ -90,6 +98,7 @@
 
         <!-- Visible on the first stage only -->
         <div id="genBox" style="display:none;margin-top:24px;padding-top:20px;border-top:1px solid var(--line)">
+          <select id="genModel" style="max-width:190px;display:inline-block;vertical-align:middle"></select>
           <select id="genCount" style="max-width:88px;display:inline-block;vertical-align:middle">
             <option value="1">1</option><option value="5">5</option>
             <option value="10">10</option><option value="25">25</option>
