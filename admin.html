@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard — Battery Station Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="loader"></div>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">🔋 Litpax</div>
+      <div class="sub">Production Admin</div>
+    </div>
+    <div class="nav" id="adminNav" style="display:none">
+      <button class="active" onclick="showTab('live',this)">📊 Live Production</button>
+      <button onclick="showTab('wip',this)">📦 WIP Board</button>
+      <button onclick="showTab('emp',this)">👥 Employee Performance</button>
+      <button onclick="showTab('hist',this)">📈 Plan History</button>
+      <button onclick="showTab('search',this)">🔍 Battery Search</button>
+    </div>
+    <div class="spacer"></div>
+  </aside>
+
+  <main class="content">
+
+  <!-- ============ PIN GATE ============ -->
+  <div class="tab active" id="tab-gate">
+    <div class="pagehead"><h1>Admin Dashboard</h1><p>Production overview and analytics</p></div>
+    <div class="card" style="max-width:420px">
+      <h2>Admin access</h2>
+      <div class="row">
+        <input id="gatePin" type="password" placeholder="Admin PIN">
+        <button class="btn" onclick="unlock()">Unlock</button>
+      </div>
+      <p id="gateMsg" class="hint" style="margin-top:8px;color:var(--err)"></p>
+    </div>
+  </div>
+
+  <!-- ============ LIVE ============ -->
+  <div class="tab" id="tab-live">
+    <div class="pagehead" style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
+      <div><h1>Live Production</h1><p>Today's targets, output and activity</p></div>
+      <button class="btn ghost sm" onclick="loadLive()">↻ Refresh</button>
+    </div>
+    <div id="liveTargets"></div>
+    <div class="statgrid" id="liveStats" style="margin-top:4px"></div>
+    <div class="card" style="margin-top:16px">
+      <h2>Today's employee activity</h2>
+      <table id="liveWorkers"><thead><tr><th>Employee</th><th>By stage</th><th>Total</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <!-- ============ WIP ============ -->
+  <div class="tab" id="tab-wip">
+    <div class="pagehead" style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
+      <div><h1>WIP Board</h1><p>Where batteries are sitting, and for how long</p></div>
+      <button class="btn ghost sm" onclick="loadWip()">↻ Refresh</button>
+    </div>
+    <div class="card">
+      <table id="wipTable">
+        <thead><tr><th>Hall</th><th>Stage</th><th>Batteries</th><th>Oldest waiting</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="hint" style="margin-top:10px">The final stage shows completed batteries — waiting time doesn't apply there.</p>
+    </div>
+  </div>
+
+  <!-- ============ EMPLOYEES ============ -->
+  <div class="tab" id="tab-emp">
+    <div class="pagehead" style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
+      <div><h1>Employee Performance</h1><p>Output and pace from scan records</p></div>
+      <select id="empPeriod" style="max-width:150px" onchange="loadEmp()">
+        <option value="1">Today</option>
+        <option value="7" selected>Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="0">All time</option>
+      </select>
+    </div>
+    <div class="card">
+      <table id="empTable">
+        <thead><tr><th>Employee</th><th>Total</th><th>Days</th><th>Avg/day</th><th>By stage</th><th>Avg pace</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="hint" style="margin-top:12px">Pace = average time between consecutive scans at a stage; gaps over 30 minutes are treated as breaks. Shown after at least 3 readings.</p>
+    </div>
+  </div>
+
+  <!-- ============ HISTORY ============ -->
+  <div class="tab" id="tab-hist">
+    <div class="pagehead" style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
+      <div><h1>Plan vs Achieved</h1><p>How targets are being met over time</p></div>
+      <select id="histPeriod" style="max-width:150px" onchange="loadHist()">
+        <option value="7">Last 7 days</option>
+        <option value="30" selected>Last 30 days</option>
+        <option value="90">Last 90 days</option>
+      </select>
+    </div>
+    <div class="statgrid" id="histTotals"></div>
+    <div class="card" style="margin-top:16px">
+      <h2>Day-wise detail</h2>
+      <table id="histTable">
+        <thead><tr><th>Date</th><th>Hall</th><th>Model</th><th>Planned</th><th>Achieved</th><th>Progress</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============ SEARCH ============ -->
+  <div class="tab" id="tab-search">
+    <div class="pagehead"><h1>Battery Search</h1><p>Complete journey of any battery</p></div>
+    <div class="card">
+      <div class="row">
+        <input id="searchSerial" placeholder="Enter serial number" style="flex:3">
+        <button class="btn" onclick="searchBattery()">Search</button>
+      </div>
+    </div>
+    <div class="card" id="searchResult" style="display:none"></div>
+  </div>
+
+  </main>
+</div>
+
+<script src="config.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
