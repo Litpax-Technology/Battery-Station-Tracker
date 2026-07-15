@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Production Plan — Litpax Technology</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="loader"></div>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">🔋 Litpax</div>
+      <div class="sub">Production Plan</div>
+    </div>
+    <div class="nav">
+      <button class="active">📋 Plan Entry</button>
+      <button onclick="location.href='index.html'">📷 Scan Station →</button>
+    </div>
+    <div class="spacer"></div>
+  </aside>
+
+  <main class="content">
+    <div class="pagehead">
+      <h1>Production Plan</h1>
+      <p>Set the daily target — it appears on every employee's station instantly</p>
+    </div>
+
+    <!-- PIN unlock -->
+    <div class="card" id="pmLogin" style="max-width:420px">
+      <h2>Manager access</h2>
+      <div class="row">
+        <input id="pmPin" type="password" placeholder="PIN">
+        <button class="btn" onclick="pmUnlock()">Unlock</button>
+      </div>
+      <p id="pmMsg" class="hint" style="margin-top:8px;color:var(--err)"></p>
+    </div>
+
+    <div id="pmPanel" style="display:none">
+      <div class="card">
+        <h2>Add / update plan</h2>
+        <div class="row">
+          <input id="planDate" type="date">
+          <select id="planHall" onchange="fillModels()"></select>
+          <select id="planModel"></select>
+          <input id="planQty" type="number" min="1" placeholder="Planned qty" style="max-width:130px">
+          <button class="btn" onclick="savePlan()">Save</button>
+        </div>
+        <p class="hint" style="margin-top:8px">Saving the same date + hall + model again simply updates the quantity.</p>
+        <p id="saveMsg" style="margin-top:6px;font-size:13px;font-weight:600"></p>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <h2 style="margin:0">Plan vs achieved — <span id="listDate"></span></h2>
+          <button class="btn ghost sm" onclick="loadPlans()">↻ Refresh</button>
+        </div>
+        <table id="planTable">
+          <thead><tr><th>Hall</th><th>Model</th><th>Planned</th><th>Achieved</th><th>Progress</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="hint" style="margin-top:10px">Achieved = batteries scanned at the hall's final stage on this date.</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="config.js"></script>
+<script src="plan.js"></script>
+</body>
+</html>
