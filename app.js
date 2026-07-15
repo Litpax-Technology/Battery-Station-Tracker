@@ -132,11 +132,26 @@ function startSession(w){
   document.getElementById('todayCount').textContent = '0';
   renderRecent();
   updateGenBox();
+  loadTarget();
   focusScan();
+}
+function loadTarget(){
+  if(!SESSION) return;
+  api({action:'target', hall:SESSION.hall}, function(r){ renderTarget(r); });
+}
+function renderTarget(t){
+  var card = document.getElementById('targetCard');
+  if(!t || !t.ok || !(t.planned > 0)){ card.style.display='none'; return; }
+  card.style.display='block';
+  document.getElementById('tgtHall').textContent = t.hall;
+  document.getElementById('tgtNums').textContent =
+    t.achieved + ' / ' + t.planned + ' · ' + t.pct + '%';
+  document.getElementById('tgtFill').style.width = t.pct + '%';
 }
 function logout(){
   SESSION = null;
   HALL = '';
+  document.getElementById('targetCard').style.display='none';
   document.getElementById('scanView').style.display='none';
   document.getElementById('loginView').style.display='none';
   document.getElementById('hallView').style.display='block';
@@ -159,6 +174,13 @@ function updateGenBox(){
   var first = stages.length ? stages[0] : '';
   document.getElementById('genBox').style.display =
     (SESSION && SESSION.stage === first) ? 'block' : 'none';
+  var models = (CONFIG.models||[]).filter(function(m){
+    return m.hall.toUpperCase() === HALL.toUpperCase();
+  });
+  var sel = document.getElementById('genModel');
+  sel.style.display = models.length ? 'inline-block' : 'none';
+  sel.innerHTML = '<option value="">— Model —</option>' +
+    models.map(function(m){ return '<option>'+m.name+'</option>'; }).join('');
 }
 function focusScan(){
   var el = SESSION ? document.getElementById('scanInput') : document.getElementById('loginScan');
@@ -190,6 +212,7 @@ function submitScan(serial){
     if(r.ok){
       flash(true, '✔ ' + r.serial + ' saved');
       document.getElementById('todayCount').textContent = r.todayCount;
+      if(r.target) renderTarget(r.target);
       sessionScans.unshift({serial:r.serial, time:new Date()});
       if(sessionScans.length>15) sessionScans.pop();
       renderRecent();
@@ -221,7 +244,13 @@ function renderRecent(){
 function generateBatteries(){
   if(!SESSION) return;
   var count = document.getElementById('genCount').value;
-  api({action:'generate', workerId:SESSION.id, hall:SESSION.hall, count:count}, function(r){
+  var modelSel = document.getElementById('genModel');
+  var model = modelSel.style.display === 'none' ? '' : modelSel.value;
+  if(modelSel.style.display !== 'none' && !model){
+    flash(false, 'Please select a model first');
+    return;
+  }
+  api({action:'generate', workerId:SESSION.id, hall:SESSION.hall, model:model, count:count}, function(r){
     if(!r.ok){ flash(false, r.error); return; }
     flash(true, '✔ ' + r.serials.length + ' new batteries created — labels below');
     document.getElementById('todayCount').textContent = r.todayCount;
