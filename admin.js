@@ -55,6 +55,14 @@ function showTab(id, btn){
 }
 
 function stat(n,l){ return '<div class="stat"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>'; }
+var CHARTS = {};
+function drawChart(id, cfg){
+  var el = document.getElementById(id);
+  if(!el || typeof Chart === 'undefined') return;
+  if(CHARTS[id]) CHARTS[id].destroy();
+  CHARTS[id] = new Chart(el, cfg);
+}
+var C_ACCENT = '#635bff', C_INDIGO = '#1e1b4b', C_SOFT = 'rgba(99,91,255,.18)';
 function bar(pct){
   return '<div class="progress" style="margin-top:0"><div class="progress-fill" style="width:'+Math.min(100,pct)+'%"></div></div>' +
          '<span class="hint">'+pct+'%</span>';
@@ -104,6 +112,15 @@ function loadWip(){
       tb.innerHTML = '<tr><td colspan="4" class="hint">No batteries in the system yet</td></tr>';
       return;
     }
+    drawChart('wipChart', {
+      type:'bar',
+      data:{ labels: r.rows.map(function(x){ return x.hall+' · '+x.stage; }),
+        datasets:[{ label:'Batteries', data:r.rows.map(function(x){ return x.count; }),
+          backgroundColor: r.rows.map(function(x){ return x.isFinal ? '#16a34a' : C_ACCENT; }),
+          borderRadius:6 }] },
+      options:{ plugins:{legend:{display:false}},
+        scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
+    });
     tb.innerHTML = r.rows.map(function(x){
       var age = x.isFinal ? '<span class="badge on">Completed</span>'
         : (x.oldestDays >= 2
@@ -115,24 +132,65 @@ function loadWip(){
 }
 
 /* ---------- Employees ---------- */
+var EMP_DATA = [];
 function loadEmp(){
   var days = document.getElementById('empPeriod').value;
+  document.getElementById('empDetail').style.display='none';
   api({action:'employeeStats', days:days}, function(r){
     var tb = document.querySelector('#empTable tbody');
     if(!r.ok){ tb.innerHTML = '<tr><td colspan="6" class="hint">'+r.error+'</td></tr>'; return; }
-    if(!r.employees.length){
-      tb.innerHTML = '<tr><td colspan="6" class="hint">No activity in this period</td></tr>';
-      return;
-    }
-    tb.innerHTML = r.employees.map(function(e){
-      var by = Object.keys(e.byStage).map(function(s){ return s+': <b>'+e.byStage[s]+'</b>'; }).join(' · ');
-      var sp = Object.keys(e.speed).length
-        ? Object.keys(e.speed).map(function(s){ return s+': <b>'+e.speed[s]+'</b> min'; }).join(' · ')
-        : '<span class="hint">Not enough data</span>';
-      return '<tr><td><b>'+e.name+'</b><br><span class="hint">'+e.id+'</span></td>' +
-        '<td><b>'+e.total+'</b></td><td>'+e.daysWorked+'</td><td>'+e.avgPerDay+'</td>' +
-        '<td>'+by+'</td><td>'+sp+'</td></tr>';
-    }).join('');
+    EMP_DATA = r.employees;
+    filterEmp();
+  });
+}
+function filterEmp(){
+  var q = (document.getElementById('empSearch').value||'').trim().toUpperCase();
+  var tb = document.querySelector('#empTable tbody');
+  var list = EMP_DATA.filter(function(e){
+    return !q || e.name.toUpperCase().indexOf(q)!==-1 || e.id.toUpperCase().indexOf(q)!==-1;
+  });
+  if(!list.length){
+    tb.innerHTML = '<tr><td colspan="6" class="hint">'+(EMP_DATA.length?'No employee matches this search':'No activity in this period')+'</td></tr>';
+    return;
+  }
+  tb.innerHTML = list.map(function(e){
+    var by = Object.keys(e.byStage).map(function(s){ return s+': <b>'+e.byStage[s]+'</b>'; }).join(' · ');
+    var sp = Object.keys(e.speed).length
+      ? Object.keys(e.speed).map(function(s){ return s+': <b>'+e.speed[s]+'</b> min'; }).join(' · ')
+      : '<span class="hint">Not enough data</span>';
+    return '<tr style="cursor:pointer" onclick="openEmp(\''+e.id+'\')">' +
+      '<td><b>'+e.name+'</b><br><span class="hint">'+e.id+'</span></td>' +
+      '<td><b>'+e.total+'</b></td><td>'+e.daysWorked+'</td><td>'+e.avgPerDay+'</td>' +
+      '<td>'+by+'</td><td>'+sp+'</td></tr>';
+  }).join('');
+}
+function openEmp(id){
+  var days = document.getElementById('empPeriod').value;
+  api({action:'employeeStats', days:days, workerId:id}, function(r){
+    if(!r.ok || !r.employees.length) return;
+    var e = r.employees[0];
+    var box = document.getElementById('empDetail');
+    box.style.display='block';
+    var by = Object.keys(e.byStage).map(function(s){ return s+': <b>'+e.byStage[s]+'</b>'; }).join(' · ');
+    var sp = Object.keys(e.speed).length
+      ? Object.keys(e.speed).map(function(s){ return s+': <b>'+e.speed[s]+'</b> min/battery'; }).join(' · ')
+      : 'Not enough data yet';
+    box.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">' +
+      '<h2 style="margin:0">'+e.name+' <span class="hint">('+e.id+')</span></h2>' +
+      '<button class="btn ghost sm" onclick="document.getElementById(\'empDetail\').style.display=\'none\'">✕ Close</button></div>' +
+      '<p class="hint" style="margin:8px 0 4px">Total: <b>'+e.total+'</b> · Days: <b>'+e.daysWorked+'</b> · Avg/day: <b>'+e.avgPerDay+'</b><br>' +
+      'Stages — '+by+'<br>Pace — '+sp+'</p>' +
+      '<canvas id="empChart" height="110"></canvas>';
+    box.scrollIntoView({behavior:'smooth'});
+    drawChart('empChart', {
+      type:'line',
+      data:{ labels: (e.daily||[]).map(function(d){ return d.date; }),
+        datasets:[{ label:'Daily output', data:(e.daily||[]).map(function(d){ return d.count; }),
+          borderColor:C_ACCENT, backgroundColor:C_SOFT, fill:true, tension:.3, pointRadius:3 }] },
+      options:{ plugins:{legend:{display:false}},
+        scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
+    });
   });
 }
 
@@ -147,8 +205,27 @@ function loadHist(){
     }).join('') || stat('—','No plans in this period');
     if(!r.rows.length){
       tb.innerHTML = '<tr><td colspan="6" class="hint">No plans or output in this period</td></tr>';
+      drawChart('histChart', {type:'bar', data:{labels:[],datasets:[]}, options:{}});
       return;
     }
+    // date-wise totals for chart (oldest → newest)
+    var byDate = {};
+    r.rows.forEach(function(x){
+      if(!byDate[x.date]) byDate[x.date] = {p:0,a:0};
+      byDate[x.date].p += x.planned; byDate[x.date].a += x.achieved;
+    });
+    var dates = Object.keys(byDate).sort();
+    drawChart('histChart', {
+      type:'bar',
+      data:{ labels: dates,
+        datasets:[
+          { label:'Planned', data:dates.map(function(d){ return byDate[d].p; }),
+            backgroundColor:'rgba(30,27,75,.25)', borderRadius:5 },
+          { label:'Achieved', data:dates.map(function(d){ return byDate[d].a; }),
+            backgroundColor:C_ACCENT, borderRadius:5 }
+        ] },
+      options:{ scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
+    });
     tb.innerHTML = r.rows.map(function(x){
       return '<tr><td>'+x.date+'</td><td>'+x.hall+'</td><td><b>'+(x.model||'—')+'</b></td>' +
         '<td>'+x.planned+'</td><td><b>'+x.achieved+'</b></td>' +
