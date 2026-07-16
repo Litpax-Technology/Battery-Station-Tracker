@@ -29,6 +29,23 @@ function api(params, cb){
 api({action:'getConfig'}, function(r){
   if(!r.ok) return;
   CONFIG = r;
+  loadPending();
+  document.getElementById('genHall').innerHTML =
+    (r.halls||[]).map(function(h){ return '<option>'+h+'</option>'; }).join('');
+  fillGenModels();
+});
+
+function loadPending(){
+  api({action:'pendingSerials'}, function(r){
+    if(!r.ok) return;
+    var sel = document.getElementById('serialSelect');
+    sel.innerHTML = '<option value="">— Pending batteries ('+r.serials.length+') —</option>' +
+      r.serials.map(function(x){
+        return '<option value="'+x.serial+'">'+x.serial+' — '+(x.model||'')+' ('+x.stage+')</option>';
+      }).join('');
+  });
+}
+  
   document.getElementById('genHall').innerHTML =
     (r.halls||[]).map(function(h){ return '<option>'+h+'</option>'; }).join('');
   fillGenModels();
@@ -217,6 +234,7 @@ function tick(stage, idx){
        hall:CURRENT.hall, mode:'manual', when:when}, function(r){
     if(!r.ok){ alert(r.error); return; }
     loadCard(CURRENT.serial); // refreshed card — tick green ho jayega
+    loadPending();
   });
 }
 
