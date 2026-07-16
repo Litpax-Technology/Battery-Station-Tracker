@@ -45,11 +45,7 @@ function loadPending(){
       }).join('');
   });
 }
-  
-  document.getElementById('genHall').innerHTML =
-    (r.halls||[]).map(function(h){ return '<option>'+h+'</option>'; }).join('');
-  fillGenModels();
-});
+
 function fillGenModels(){
   var hall = document.getElementById('genHall').value;
   var models = (CONFIG.models||[]).filter(function(m){
