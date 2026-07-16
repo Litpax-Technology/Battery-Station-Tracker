@@ -182,7 +182,11 @@ function renderCard(){
       var opts = stageWorkers(r.hall, st).map(function(w){
         return '<option value="'+w.id+'">'+w.name+'</option>';
       }).join('');
-      html += '<td><select id="wsel_'+i+'">'+opts+'</select></td>' +
+      html += '<td><select id="wsel_'+i+'">'+opts+'</select>' +
+        '<div style="margin-top:6px;display:flex;gap:6px">' +
+        '<input type="date" id="wdate_'+i+'" style="padding:5px;font-size:12px">' +
+        '<input type="time" id="wtime_'+i+'" style="padding:5px;font-size:12px;max-width:110px">' +
+        '</div></td>' +
         '<td><button class="btn sm" onclick="tick(\''+st.replace(/'/g,"\\'")+'\', '+i+')">✓ Done</button>' +
         '<span class="bc-tickbox"></span></td>';
     } else {
@@ -206,8 +210,11 @@ function tick(stage, idx){
   var sel = document.getElementById('wsel_'+idx);
   var workerId = sel ? sel.value : '';
   if(!workerId){ alert('Select a worker first'); return; }
+  var d = document.getElementById('wdate_'+idx);
+  var t = document.getElementById('wtime_'+idx);
+  var when = (d && d.value && t && t.value) ? (d.value + ' ' + t.value) : '';
   api({action:'scan', serial:CURRENT.serial, stage:stage, workerId:workerId,
-       hall:CURRENT.hall, mode:'manual'}, function(r){
+       hall:CURRENT.hall, mode:'manual', when:when}, function(r){
     if(!r.ok){ alert(r.error); return; }
     loadCard(CURRENT.serial); // refreshed card — tick green ho jayega
   });
