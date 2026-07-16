@@ -26,7 +26,88 @@ function api(params, cb){
   document.body.appendChild(s);
 }
 
-api({action:'getConfig'}, function(r){ if(r.ok) CONFIG = r; });
+api({action:'getConfig'}, function(r){
+  if(!r.ok) return;
+  CONFIG = r;
+  document.getElementById('genHall').innerHTML =
+    (r.halls||[]).map(function(h){ return '<option>'+h+'</option>'; }).join('');
+  fillGenModels();
+});
+function fillGenModels(){
+  var hall = document.getElementById('genHall').value;
+  var models = (CONFIG.models||[]).filter(function(m){
+    return m.hall.toUpperCase() === String(hall).toUpperCase();
+  });
+  document.getElementById('genModel').innerHTML = models.length
+    ? models.map(function(m){ return '<option>'+m.name+'</option>'; }).join('')
+    : '<option value="">No models for this hall</option>';
+}
+
+/* ---------- Generate + blank cards ---------- */
+function generateCards(){
+  var hall = document.getElementById('genHall').value;
+  var model = document.getElementById('genModel').value;
+  var qty = Math.max(1, Math.min(100, Number(document.getElementById('genQty').value)||1));
+  if(!hall) return;
+  api({action:'generate', register:'1', hall:hall, model:model, count:qty}, function(r){
+    if(!r.ok){ alert(r.error); return; }
+    var box = document.getElementById('genCards');
+    box.innerHTML = '';
+    var stages = hallStages(hall);
+    var today = new Date().toLocaleDateString('en-GB');
+    r.serials.forEach(function(sn){
+      var d = document.createElement('div');
+      d.className = 'bcard';
+      d.innerHTML = blankCardHtml(sn, model, hall, today, stages);
+      box.appendChild(d);
+      try{ new QRCode(d.querySelector('.bc-qr'),
+        {text:sn, width:64, height:64, correctLevel:QRCode.CorrectLevel.M}); }catch(e){}
+    });
+    document.getElementById('genCount').textContent =
+      r.serials.length + ' card(s) ready — ' + r.serials[0] +
+      (r.serials.length>1 ? ' → ' + r.serials[r.serials.length-1] : '');
+    document.getElementById('genWrap').style.display='block';
+    box.scrollIntoView({behavior:'smooth'});
+  });
+}
+function blankCardHtml(serial, model, hall, dateStr, stages){
+  return '<div class="bc-head">' +
+      '<div><div class="bc-co">LITPAX TECHNOLOGY</div>' +
+      '<div class="bc-title">Battery production card</div>' +
+      '<div class="bc-serial">'+serial+'</div></div>' +
+      '<div class="bc-qr"></div>' +
+    '</div>' +
+    '<table class="bc-meta"><tr>' +
+      '<td><span>Model</span><b>'+(model||'—')+'</b></td>' +
+      '<td><span>Hall</span><b>'+hall+'</b></td>' +
+      '<td><span>Created</span><b>'+dateStr+'</b></td>' +
+    '</tr></table>' +
+    '<table class="bc-stages"><thead><tr>' +
+      '<th style="width:28%">Stage</th><th style="width:34%">Worker</th>' +
+      '<th style="width:16%">Done ✓</th><th style="width:22%">Time</th>' +
+    '</tr></thead><tbody>' +
+    stages.map(function(st, i){
+      return '<tr><td><b>'+(i+1)+'. '+st+'</b></td><td></td>' +
+        '<td style="text-align:center"><span class="bc-tickbox" style="display:inline-block"></span></td>' +
+        '<td></td></tr>';
+    }).join('') +
+    '</tbody></table>' +
+    '<div class="bc-foot">Apna stage complete karke ✓ tick karein. Final stage ke baad card supervisor ko jama karein — entry card.html se hogi.</div>';
+}
+function printGen(){
+  document.body.classList.remove('print-fill');
+  document.body.classList.add('print-gen');
+  setTimeout(function(){ window.print();
+    setTimeout(function(){ document.body.classList.remove('print-gen'); }, 500);
+  }, 50);
+}
+function printFill(){
+  document.body.classList.remove('print-gen');
+  document.body.classList.add('print-fill');
+  setTimeout(function(){ window.print();
+    setTimeout(function(){ document.body.classList.remove('print-fill'); }, 500);
+  }, 50);
+}
 
 /* ---------- Load card ---------- */
 function loadCard(serialArg){
