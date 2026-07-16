@@ -64,6 +64,9 @@
 
     <div class="card">
       <div class="row">
+        <select id="serialSelect" onchange="if(this.value) loadCard(this.value)" style="flex:2">
+          <option value="">— Pending batteries —</option>
+        </select>
         <input id="serialInput" placeholder="Scan or type serial number" autocomplete="off" style="flex:3">
         <button class="btn" onclick="loadCard()">Load card</button>
         <button class="btn ghost" id="camBtn" onclick="toggleCam()">📷 Camera</button>
