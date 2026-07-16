@@ -86,7 +86,7 @@ function generateCards(){
 function blankCardHtml(serial, model, hall, dateStr, stages){
   return '<div class="bc-head">' +
       '<div><div class="bc-co">LITPAX TECHNOLOGY</div>' +
-      '<div class="bc-title">Battery production card</div>' +
+      '<div class="bc-title">Routing card</div>' +
       '<div class="bc-serial">'+serial+'</div></div>' +
       '<div class="bc-qr"></div>' +
     '</div>' +
@@ -96,8 +96,8 @@ function blankCardHtml(serial, model, hall, dateStr, stages){
       '<td><span>Created</span><b>'+dateStr+'</b></td>' +
     '</tr></table>' +
     '<table class="bc-stages"><thead><tr>' +
-      '<th style="width:28%">Stage</th><th style="width:34%">Worker</th>' +
-      '<th style="width:16%">Done ✓</th><th style="width:22%">Time</th>' +
+      '<th style="width:28%">Stage</th><th style="width:34%">Name and Sign</th>' +
+      '<th style="width:16%">Done ✓</th><th style="width:22%">Date & Time</th>' +
     '</tr></thead><tbody>' +
     stages.map(function(st, i){
       return '<tr><td><b>'+(i+1)+'. '+st+'</b></td><td></td>' +
