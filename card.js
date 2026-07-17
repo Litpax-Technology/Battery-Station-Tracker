@@ -32,6 +32,7 @@ api({action:'getConfig'}, function(r){
   CONFIG = r;
   loadPending();
   loadTodayPlan();
+  document.getElementById('planDate').value = new Date().toISOString().slice(0,10);
   api({action:'todayPlan'}, function(tp){ if(tp.ok) TODAY_PLANS = tp.plans; });
   document.getElementById('genHall').innerHTML =
     (r.halls||[]).map(function(h){ return '<option>'+h+'</option>'; }).join('');
@@ -82,6 +83,8 @@ function generateCards(){
   var model = document.getElementById('genModel').value;
   var qty = Math.max(1, Math.min(100, Number(document.getElementById('genQty').value)||1));
   if(!hall) return;
+  var pDate = document.getElementById('planDate').value;
+  api({action:'todayPlan', date:pDate}, function(tp){ if(tp.ok) TODAY_PLANS = tp.plans; });
   api({action:'generate', register:'1', hall:hall, model:model, count:qty}, function(r){
     if(!r.ok){ alert(r.error); return; }
     var box = document.getElementById('genCards');
