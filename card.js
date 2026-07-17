@@ -101,6 +101,7 @@ function generateCards(){
       (r.serials.length>1 ? ' → ' + r.serials[r.serials.length-1] : '');
     document.getElementById('genWrap').style.display='block';
     box.scrollIntoView({behavior:'smooth'});
+    loadPending();
   });
 }
 
