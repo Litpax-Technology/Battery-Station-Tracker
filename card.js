@@ -4,6 +4,7 @@
 
 var CONFIG = { stages:[], workers:[], settings:{} };
 var CURRENT = null; // {serial, hall, model, created, history}
+var TODAY_PLANS = [];
 
 /* ---------- JSONP helper ---------- */
 var jsonpCount = 0;
@@ -31,6 +32,7 @@ api({action:'getConfig'}, function(r){
   CONFIG = r;
   loadPending();
   loadTodayPlan();
+  api({action:'todayPlan'}, function(tp){ if(tp.ok) TODAY_PLANS = tp.plans; });
   document.getElementById('genHall').innerHTML =
     (r.halls||[]).map(function(h){ return '<option>'+h+'</option>'; }).join('');
   fillGenModels();
@@ -113,6 +115,7 @@ function blankCardHtml(serial, model, hall, dateStr, stages){
       '<td><span>Hall</span><b>'+hall+'</b></td>' +
       '<td><span>Created</span><b>'+dateStr+'</b></td>' +
     '</tr></table>' +
+    planBlockHtml(hall) +
     '<table class="bc-stages"><thead><tr>' +
       '<th style="width:28%">Stage</th><th style="width:34%">Name and Sign</th>' +
       '<th style="width:16%">Done ✓</th><th style="width:22%">Date & Time</th>' +
@@ -125,6 +128,19 @@ function blankCardHtml(serial, model, hall, dateStr, stages){
     '</tbody></table>' +
     '<div class="bc-foot">Apna stage complete karke ✓ tick karein. Final stage ke baad card supervisor ko jama karein — entry card.html se hogi.</div>';
 }
+
+function planBlockHtml(hall){
+  var rows = TODAY_PLANS.filter(function(p){
+    return p.hall.toUpperCase() === String(hall).toUpperCase();
+  });
+  if(!rows.length) return '';
+  var total = 0; rows.forEach(function(p){ total += p.qty; });
+  return '<table class="bc-meta" style="margin-top:8px"><tr>' +
+    "<td><span>TODAY'S PRODUCTION PLAN</span><b>" +
+    rows.map(function(p){ return p.model+': '+p.qty; }).join(' · ') +
+    ' &nbsp;—&nbsp; Total: '+total+'</b></td></tr></table>';
+}
+
 function printGen(){
   document.body.classList.remove('print-fill');
   document.body.classList.add('print-gen');
