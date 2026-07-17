@@ -150,7 +150,7 @@ function blankCardHtml(serial, model, hall, dateStr, stages){
     '</tr></table>' +
     planBlockHtml(hall) +
     '<table class="bc-stages"><thead><tr>' +
-      '<th style="width:28%">Stage</th><th style="width:34%">Name and Sign</th>' +
+      '<th style="width:28%">Stage</th><th style="width:34%">Emp ID</th>' +
       '<th style="width:16%">Done ✓</th><th style="width:22%">Date & Time</th>' +
     '</tr></thead><tbody>' +
     stages.map(function(st, i){
