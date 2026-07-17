@@ -103,6 +103,30 @@ function generateCards(){
     box.scrollIntoView({behavior:'smooth'});
   });
 }
+
+function reprintCards(){
+  var from = document.getElementById('rpFrom').value.trim();
+  var to = document.getElementById('rpTo').value.trim();
+  if(!from) return;
+  api({action:'cardReprint', from:from, to:to}, function(r){
+    if(!r.ok){ alert(r.error); return; }
+    var box = document.getElementById('genCards');
+    box.innerHTML = '';
+    r.cards.forEach(function(c){
+      var d = document.createElement('div');
+      d.className = 'bcard';
+      d.innerHTML = blankCardHtml(c.serial, c.model, c.hall,
+        c.created || new Date().toLocaleDateString('en-GB'), hallStages(c.hall));
+      box.appendChild(d);
+      try{ new QRCode(d.querySelector('.bc-qr'),
+        {text:c.serial, width:64, height:64, correctLevel:QRCode.CorrectLevel.M}); }catch(e){}
+    });
+    document.getElementById('genCount').textContent = r.cards.length + ' card(s) — reprint';
+    document.getElementById('genWrap').style.display='block';
+    box.scrollIntoView({behavior:'smooth'});
+  });
+}
+
 function blankCardHtml(serial, model, hall, dateStr, stages){
   return '<div class="bc-head">' +
       '<div><div class="bc-co">LITPAX TECHNOLOGY</div>' +
