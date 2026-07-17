@@ -30,6 +30,7 @@ api({action:'getConfig'}, function(r){
   if(!r.ok) return;
   CONFIG = r;
   loadPending();
+  loadTodayPlan();
   document.getElementById('genHall').innerHTML =
     (r.halls||[]).map(function(h){ return '<option>'+h+'</option>'; }).join('');
   fillGenModels();
@@ -43,6 +44,23 @@ function loadPending(){
       r.serials.map(function(x){
         return '<option value="'+x.serial+'">'+x.serial+' — '+(x.model||'')+' ('+x.stage+')</option>';
       }).join('');
+  });
+}
+
+function loadTodayPlan(){
+  var box = document.getElementById('todayPlan');
+  box.innerHTML = '';
+  (CONFIG.halls||[]).forEach(function(h){
+    api({action:'target', hall:h}, function(t){
+      if(!t.ok) return;
+      var d = document.createElement('div');
+      d.className = 'stat';
+      d.innerHTML = '<div class="n">' +
+        (t.planned>0 ? t.achieved+'/'+t.planned : t.achieved) +
+        '</div><div class="l">'+t.hall+" — today's plan" +
+        (t.planned>0 ? ' ('+t.pct+'%)' : ' (no plan set)')+'</div>';
+      box.appendChild(d);
+    });
   });
 }
 
@@ -231,6 +249,7 @@ function tick(stage, idx){
     if(!r.ok){ alert(r.error); return; }
     loadCard(CURRENT.serial); // refreshed card — tick green ho jayega
     loadPending();
+    loadTodayPlan();
   });
 }
 
