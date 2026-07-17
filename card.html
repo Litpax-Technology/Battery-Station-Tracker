@@ -32,25 +32,30 @@
   .bc-foot{margin-top:10px;border-top:1px dashed #9aa0b5;padding-top:8px;font-size:10px;color:#697386}
   #genCards .bcard{margin-bottom:16px}
   @media print{
-    @page{ size:A4; margin:8mm }
+    @page{ size:A4; margin:6mm }
     body *{visibility:hidden}
     body.print-fill #bcard, body.print-fill #bcard *{visibility:visible}
     body.print-fill #bcard{position:absolute;left:0;top:0;width:100%;max-width:100%;border-radius:0}
 
     body.print-gen #genCards, body.print-gen #genCards *{visibility:visible}
     body.print-gen #genCards{position:absolute;left:0;top:0;width:100%;
-      display:flex;flex-wrap:wrap;gap:6mm;align-content:flex-start}
-    body.print-gen .bcard{width:calc(50% - 3mm);max-width:none;margin:0;border-radius:0;
-      page-break-inside:avoid;padding:8px 10px;box-sizing:border-box}
-    body.print-gen .bc-title{font-size:12px}
-    body.print-gen .bc-serial{font-size:13px}
-    body.print-gen .bc-co{font-size:8px}
-    body.print-gen .bc-meta td b{font-size:10px}
-    body.print-gen .bc-meta td span{font-size:8px}
-    body.print-gen .bc-stages th{font-size:8px;padding:4px 6px}
-    body.print-gen .bc-stages td{font-size:9.5px;padding:4px 6px}
-    body.print-gen .bc-foot{font-size:7.5px}
-    body.print-gen .bc-tickbox{width:12px;height:12px}
+      display:flex;flex-wrap:wrap;gap:4mm;align-content:flex-start}
+    body.print-gen .bcard{width:calc(50% - 2mm);max-width:none;margin:0;border-radius:0;
+      page-break-inside:avoid;padding:5px 8px;box-sizing:border-box;border-width:1px}
+    body.print-gen .bc-head{padding-bottom:4px}
+    body.print-gen .bc-title{font-size:11px;margin-top:0}
+    body.print-gen .bc-serial{font-size:12px;margin-top:2px}
+    body.print-gen .bc-co{font-size:7px;letter-spacing:1px}
+    body.print-gen .bc-qr img, body.print-gen .bc-qr canvas{width:48px !important;height:48px !important}
+    body.print-gen .bc-meta{margin-top:4px}
+    body.print-gen .bc-meta td{padding:2px 5px}
+    body.print-gen .bc-meta td b{font-size:9px}
+    body.print-gen .bc-meta td span{font-size:7px}
+    body.print-gen .bc-stages{margin-top:5px}
+    body.print-gen .bc-stages th{font-size:7.5px;padding:2.5px 5px}
+    body.print-gen .bc-stages td{font-size:9px;padding:2.5px 5px}
+    body.print-gen .bc-foot{display:none}
+    body.print-gen .bc-tickbox{width:10px;height:10px}
 
     .bcard button, .bcard select{display:none}
     .bc-tickbox{display:inline-block !important}
