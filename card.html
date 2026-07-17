@@ -90,6 +90,14 @@
         <button class="btn" onclick="generateCards()">Print new card</button>
       </div>
       <p class="hint" style="margin-top:8px">Serial number sheet se automatic aage badhta hai — card print karke battery pe lagao, sham ko neeche se entry karo.</p>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+        <div class="row">
+          <input id="rpFrom" placeholder="From serial (e.g. LTP-00005)">
+          <input id="rpTo" placeholder="To serial (optional)">
+          <button class="btn ghost" onclick="reprintCards()">🖨️ Reprint cards</button>
+        </div>
+        <p class="hint" style="margin-top:6px">Page refresh ho gaya? Purane cards yahan se dobara nikal lo — koi nayi entry nahi banti.</p>
+      </div>
     </div>
 
     <div id="genWrap" style="display:none">
