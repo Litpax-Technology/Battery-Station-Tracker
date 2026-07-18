@@ -68,10 +68,10 @@ document.getElementById('pmPin').addEventListener('keydown', function(e){
 });
 
 /* ---------- Save + list ---------- */
-function savePlan(){
+function savePlan(mode){
   var msg = document.getElementById('saveMsg');
   msg.textContent = '';
-  api({action:'addPlan', pin:PIN,
+  api({action:'addPlan', pin:PIN, mode: mode || 'add',
        date: document.getElementById('planDate').value,
        hall: document.getElementById('planHall').value,
        model: document.getElementById('planModel').value,
@@ -99,7 +99,8 @@ function renderPlans(r){
   }
   tb.innerHTML = r.plans.map(function(p){
     return '<tr><td>'+p.hall+'</td><td><b>'+p.model+'</b></td>' +
-      '<td>'+p.planned+'</td><td><b>'+p.achieved+'</b></td>' +
+      '<td>'+p.planned+' <button class="btn ghost sm" onclick="editPlan(\''+p.hall+'\',\''+p.model+'\','+p.planned+')">✏️</button></td>' +
+      '<td><b>'+p.achieved+'</b></td>' +
       '<td style="min-width:140px"><div class="progress" style="margin-top:0">' +
       '<div class="progress-fill" style="width:'+Math.min(100,p.pct)+'%"></div></div>' +
       '<span class="hint">'+p.pct+'%</span></td></tr>';
@@ -109,3 +110,27 @@ function renderPlans(r){
 document.getElementById('planDate').addEventListener('change', function(){
   if(PIN) loadPlans();
 });
+
+
+function editPlan(hall, model, qty){
+  document.getElementById('planHall').value = hall;
+  fillModels();
+  document.getElementById('planModel').value = model;
+  var v = prompt('New planned qty for ' + model + ':', qty);
+  if(v === null || !(Number(v) > 0)) return;
+  document.getElementById('planQty').value = v;
+  savePlan('set');
+}
+function addModel(){
+  var name = document.getElementById('nmName').value.trim();
+  if(!name) return;
+  api({action:'admin', op:'addModel', pin:PIN,
+       name:name, hall:document.getElementById('planHall').value,
+       details:document.getElementById('nmDetails').value.trim()},
+    function(r){
+      if(!r.ok){ alert(r.error); return; }
+      document.getElementById('nmName').value='';
+      document.getElementById('nmDetails').value='';
+      api({action:'getConfig'}, function(c){ if(c.ok){ CONFIG=c; fillModels(); } });
+    });
+}
