@@ -32,6 +32,7 @@ api({action:'getConfig'}, function(r){
   document.getElementById('planHall').innerHTML =
     r.halls.map(function(h){ return '<option>'+h+'</option>'; }).join('');
   fillModels();
+  loadPlans();
 });
 document.getElementById('planDate').value = todayStr();
 
