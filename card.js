@@ -259,10 +259,9 @@ function renderCard(){
         '<td><span class="bc-done">✓ Done<small>'+h.time+'</small></span>' +
         '<span class="bc-tickbox"></span></td>';
     } else if(i === nextIdx){
-      var opts = stageWorkers(r.hall, st).map(function(w){
-        return '<option value="'+w.id+'">'+w.name+'</option>';
-      }).join('');
-      html += '<td><select id="wsel_'+i+'">'+opts+'</select>' +
+      html += '<td><input id="wsel_'+i+'" placeholder="Emp ID (W-104)" autocomplete="off" ' +
+        'oninput="detectWorker('+i+')" style="max-width:140px;text-transform:uppercase">' +
+        '<div id="wname_'+i+'" class="hint" style="margin-top:4px;font-weight:600"></div>' +
         '<div style="margin-top:6px;display:flex;gap:6px">' +
         '<input type="date" id="wdate_'+i+'" style="padding:5px;font-size:12px">' +
         '<input type="time" id="wtime_'+i+'" style="padding:5px;font-size:12px;max-width:110px">' +
@@ -285,11 +284,20 @@ function renderCard(){
   document.getElementById('cardWrap').style.display='block';
 }
 
+function detectWorker(i){
+  var v = document.getElementById('wsel_'+i).value.trim().toUpperCase();
+  var w = (CONFIG.workers||[]).filter(function(x){ return x.id.toUpperCase() === v; })[0];
+  var el = document.getElementById('wname_'+i);
+  if(w){ el.style.color = 'var(--ok)'; el.textContent = '✓ ' + w.name; }
+  else { el.style.color = 'var(--err)'; el.textContent = v ? 'ID not found' : ''; }
+}
+
 /* ---------- Tick = save ---------- */
 function tick(stage, idx){
   var sel = document.getElementById('wsel_'+idx);
-  var workerId = sel ? sel.value : '';
-  if(!workerId){ alert('Select a worker first'); return; }
+  var workerId = sel ? sel.value.trim().toUpperCase() : '';
+  var known = (CONFIG.workers||[]).some(function(x){ return x.id.toUpperCase() === workerId; });
+  if(!workerId || !known){ alert('Valid Emp ID daalo — sahi hone par naam green me dikhta hai'); return; }
   var d = document.getElementById('wdate_'+idx);
   var t = document.getElementById('wtime_'+idx);
   var when = (d && d.value && t && t.value) ? (d.value + ' ' + t.value) : '';
