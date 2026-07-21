@@ -258,7 +258,7 @@ function renderCard(){
       html += '<td>'+h.workerName+' <span class="hint">('+h.workerId+')</span></td>' +
         '<td><span class="bc-done">✓ Done<small>'+h.time+'</small></span>' +
         '<span class="bc-tickbox"></span></td>';
-    } else if(i === nextIdx){
+    } else {
       html += '<td><input id="wsel_'+i+'" placeholder="Emp ID (W-104)" autocomplete="off" ' +
         'oninput="detectWorker('+i+')" style="max-width:140px;text-transform:uppercase">' +
         '<div id="wname_'+i+'" class="hint" style="margin-top:4px;font-weight:600"></div>' +
@@ -266,17 +266,16 @@ function renderCard(){
         '<input type="date" id="wdate_'+i+'" style="padding:5px;font-size:12px">' +
         '<input type="time" id="wtime_'+i+'" style="padding:5px;font-size:12px;max-width:110px">' +
         '</div></td>' +
-        '<td><button class="btn sm" onclick="tick(\''+st.replace(/'/g,"\\'")+'\', '+i+')">✓ Done</button>' +
-        '<span class="bc-tickbox"></span></td>';
-    } else {
-      html += '<td class="bc-pending">—</td>' +
-        '<td><span class="bc-pending">pending</span><span class="bc-tickbox"></span></td>';
+        '<td><span class="bc-tickbox"></span></td>';
     }
     html += '</tr>';
   });
 
-  html += '</tbody></table>' +
-    '<div class="bc-foot">Har stage complete hone par worker select karke ✓ Done dabayein — entry turant sheet me save hoti hai. Print par khali tick boxes aate hain (paper card ke liye).</div>';
+  html += '</tbody></table>';
+  if(stages.some(function(st){ return !doneMap[st]; })){
+    html += '<div style="margin:12px 0"><button class="btn" onclick="saveAll()">✓ Save all filled</button></div>';
+  }
+  html += '<div class="bc-foot">Jitni bhi stages ki Emp ID bhari hai, unhe order me ek saath save karo. Beech me koi blank chhoda to wahin ruk jayega (sequence). Print par khali tick boxes aate hain.</div>';
 
   el.innerHTML = html;
   try{ new QRCode(document.getElementById('bcQr'),
@@ -292,6 +291,12 @@ function detectWorker(i){
   else { el.style.color = 'var(--err)'; el.textContent = v ? 'ID not found' : ''; }
 }
 
+function nowLabel(){
+  var d = new Date();
+  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) +
+         ', ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+}
+
 /* ---------- Tick = save ---------- */
 function tick(stage, idx){
   var sel = document.getElementById('wsel_'+idx);
@@ -304,9 +309,47 @@ function tick(stage, idx){
   api({action:'scan', serial:CURRENT.serial, stage:stage, workerId:workerId,
        hall:CURRENT.hall, mode:'manual', when:when}, function(r){
     if(!r.ok){ alert(r.error); return; }
-    loadCard(CURRENT.serial); // refreshed card — tick green ho jayega
-    loadPending();
-    loadTodayPlan();
+    // Local update — koi reload nahi (turant / fast)
+    var wObj = (CONFIG.workers||[]).filter(function(x){ return x.id.toUpperCase() === workerId; })[0];
+    CURRENT.history.push({ stage:stage, workerId:workerId,
+      workerName: wObj ? wObj.name : workerId,
+      time: when || nowLabel(), hall:CURRENT.hall, mode:'manual' });
+    renderCard();
+    if(r.target){ loadPending(); loadTodayPlan(); }
+  });
+}
+
+function saveAll(){
+  var stages = hallStages(CURRENT.hall);
+  var doneMap = {};
+  CURRENT.history.forEach(function(h){ if(!doneMap[h.stage]) doneMap[h.stage]=h; });
+
+  var items = [];
+  for(var i=0;i<stages.length;i++){
+    var st = stages[i];
+    if(doneMap[st]) continue;
+    var sel = document.getElementById('wsel_'+i);
+    var id = sel ? sel.value.trim().toUpperCase() : '';
+    if(!id) break;                 // blank → ruk jao (sequence)
+    var known = (CONFIG.workers||[]).some(function(x){ return x.id.toUpperCase()===id; });
+    if(!known){ alert('Stage '+(i+1)+' ('+st+') me Emp ID galat hai'); return; }
+    var d = document.getElementById('wdate_'+i);
+    var t = document.getElementById('wtime_'+i);
+    var when = (d&&d.value&&t&&t.value) ? (d.value+' '+t.value) : '';
+    items.push({ stage:st, workerId:id, when:when });
+  }
+  if(!items.length){ alert('Kam se kam ek stage me Emp ID daalo'); return; }
+
+  api({action:'multiScan', serial:CURRENT.serial, hall:CURRENT.hall,
+       items: JSON.stringify(items)}, function(r){
+    if(!r.ok){ alert(r.error); return; }
+    (r.saved||[]).forEach(function(sv){
+      CURRENT.history.push({ stage:sv.stage, workerId:sv.workerId,
+        workerName:sv.workerName, time:sv.when, hall:CURRENT.hall, mode:'manual' });
+    });
+    renderCard();
+    if(r.stopReason) alert('Yahan ruka: '+r.stopReason);
+    if(r.target){ loadPending(); loadTodayPlan(); }
   });
 }
 
