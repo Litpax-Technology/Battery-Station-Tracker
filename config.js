@@ -3,4 +3,4 @@
  * ============================================ */
 
 /* GAS Web App URL yahan paste karo */
-var API_URL = 'https://script.google.com/macros/s/AKfycbwIQpieCWY1WbYP3HiUIzi5FgdfEPx9i5M_VkK7ZDaKNqA2K0D3V6mjWKnYdlPaNLPWpQ/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbxl4td9m1IM-cDx3pv9S6sbqXe_E8EyLdJvAax2Rt2aIglicnX5UV_KuooCJklOTHYywg/exec';
