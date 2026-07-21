@@ -52,10 +52,10 @@ function loadPending(){
 
 function loadTodayPlan(){
   var box = document.getElementById('todayPlan');
-  box.innerHTML = '';
-  (CONFIG.halls||[]).forEach(function(h){
-    api({action:'target', hall:h}, function(t){
-      if(!t.ok) return;
+  api({action:'targetsAll'}, function(r){
+    if(!r.ok) return;
+    box.innerHTML = '';
+    (r.halls||[]).forEach(function(t){
       var d = document.createElement('div');
       d.className = 'stat';
       d.innerHTML = '<div class="n">' +
