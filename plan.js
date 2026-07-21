@@ -125,7 +125,7 @@ function editPlan(hall, model, qty){
 function addModel(){
   var name = document.getElementById('nmName').value.trim();
   if(!name) return;
-  api({action:'admin', op:'addModel', pin:PIN,
+  api({action:'addModel',
        name:name, hall:document.getElementById('planHall').value,
        details:document.getElementById('nmDetails').value.trim()},
     function(r){
