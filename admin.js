@@ -73,17 +73,18 @@ function loadLive(){
   // Har hall ka aaj ka target
   var box = document.getElementById('liveTargets');
   box.innerHTML = '';
-  (CONFIG.halls||[]).forEach(function(h){
-    api({action:'target', hall:h}, function(t){
-      if(!t.ok) return;
+  api({action:'targetsAll'}, function(r){
+    if(!r.ok) return;
+    (r.halls||[]).forEach(function(t){
+      var icon = t.type === 'Dispatch' ? '🚚' : '🏭';
       var div = document.createElement('div');
       div.className = 'card';
       div.innerHTML =
         '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">' +
-        '<h2 style="margin:0">'+t.hall+' — today</h2>' +
+        '<h2 style="margin:0">'+icon+' '+t.hall+' — '+t.type+'</h2>' +
         '<span style="font-weight:700;color:var(--indigo)">' +
         (t.planned>0 ? t.achieved+' / '+t.planned+' · '+t.pct+'%'
-                     : t.achieved+' completed · no plan set') + '</span></div>' +
+                     : t.achieved+' done · no plan set') + '</span></div>' +
         (t.planned>0 ? '<div class="progress"><div class="progress-fill" style="width:'+t.pct+'%"></div></div>' : '');
       box.appendChild(div);
     });
@@ -199,35 +200,42 @@ function loadHist(){
   var days = document.getElementById('histPeriod').value;
   api({action:'planHistory', pin:PIN, days:days}, function(r){
     var tb = document.querySelector('#histTable tbody');
-    if(!r.ok){ tb.innerHTML = '<tr><td colspan="6" class="hint">'+r.error+'</td></tr>'; return; }
+    if(!r.ok){ tb.innerHTML = '<tr><td colspan="7" class="hint">'+r.error+'</td></tr>'; return; }
     document.getElementById('histTotals').innerHTML = r.totals.map(function(t){
-      return stat(t.pct+'%', t.hall+' · '+t.achieved+'/'+t.planned);
+      var icon = t.type === 'Dispatch' ? '🚚' : '🏭';
+      return stat(t.pct+'%', icon+' '+t.hall+' '+t.type+' · '+t.achieved+'/'+t.planned);
     }).join('') || stat('—','No plans in this period');
     if(!r.rows.length){
-      tb.innerHTML = '<tr><td colspan="6" class="hint">No plans or output in this period</td></tr>';
+      tb.innerHTML = '<tr><td colspan="7" class="hint">No plans or output in this period</td></tr>';
       drawChart('histChart', {type:'bar', data:{labels:[],datasets:[]}, options:{}});
       return;
     }
-    // date-wise totals for chart (oldest → newest)
     var byDate = {};
     r.rows.forEach(function(x){
-      if(!byDate[x.date]) byDate[x.date] = {p:0,a:0};
-      byDate[x.date].p += x.planned; byDate[x.date].a += x.achieved;
+      if(!byDate[x.date]) byDate[x.date] = {pp:0,pa:0,dp:0,da:0};
+      if(x.type === 'Dispatch'){ byDate[x.date].dp += x.planned; byDate[x.date].da += x.achieved; }
+      else { byDate[x.date].pp += x.planned; byDate[x.date].pa += x.achieved; }
     });
     var dates = Object.keys(byDate).sort();
     drawChart('histChart', {
       type:'bar',
       data:{ labels: dates,
         datasets:[
-          { label:'Planned', data:dates.map(function(d){ return byDate[d].p; }),
+          { label:'Prod planned', data:dates.map(function(d){ return byDate[d].pp; }),
             backgroundColor:'rgba(30,27,75,.25)', borderRadius:5 },
-          { label:'Achieved', data:dates.map(function(d){ return byDate[d].a; }),
-            backgroundColor:C_ACCENT, borderRadius:5 }
+          { label:'Prod achieved', data:dates.map(function(d){ return byDate[d].pa; }),
+            backgroundColor:C_ACCENT, borderRadius:5 },
+          { label:'Disp planned', data:dates.map(function(d){ return byDate[d].dp; }),
+            backgroundColor:'rgba(16,185,129,.25)', borderRadius:5 },
+          { label:'Disp achieved', data:dates.map(function(d){ return byDate[d].da; }),
+            backgroundColor:'#10b981', borderRadius:5 }
         ] },
       options:{ scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
     });
     tb.innerHTML = r.rows.map(function(x){
-      return '<tr><td>'+x.date+'</td><td>'+x.hall+'</td><td><b>'+(x.model||'—')+'</b></td>' +
+      var icon = x.type === 'Dispatch' ? '🚚 Dispatch' : '🏭 Production';
+      return '<tr><td>'+x.date+'</td><td><b>'+icon+'</b></td><td>'+x.hall+'</td>' +
+        '<td><b>'+(x.model||'—')+'</b></td>' +
         '<td>'+x.planned+'</td><td><b>'+x.achieved+'</b></td>' +
         '<td style="min-width:140px">'+bar(x.pct)+'</td></tr>';
     }).join('');
