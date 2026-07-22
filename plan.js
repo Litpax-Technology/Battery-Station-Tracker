@@ -76,6 +76,7 @@ function savePlan(mode){
        date: document.getElementById('planDate').value,
        hall: document.getElementById('planHall').value,
        model: document.getElementById('planModel').value,
+       type: document.getElementById('planType').value,
        qty: document.getElementById('planQty').value},
     function(r){
       if(!r.ok){ msg.style.color='var(--err)'; msg.textContent = r.error; return; }
@@ -95,12 +96,17 @@ function renderPlans(r){
   document.getElementById('listDate').textContent = r.date;
   var tb = document.querySelector('#planTable tbody');
   if(!r.plans.length){
-    tb.innerHTML = '<tr><td colspan="5" class="hint">No plan entered for this date</td></tr>';
+    tb.innerHTML = '<tr><td colspan="6" class="hint">No plan entered for this date</td></tr>';
     return;
   }
-  tb.innerHTML = r.plans.map(function(p){
-    return '<tr><td>'+p.hall+'</td><td><b>'+p.model+'</b></td>' +
-      '<td>'+p.planned+' <button class="btn ghost sm" onclick="editPlan(\''+p.hall+'\',\''+p.model+'\','+p.planned+')">✏️</button></td>' +
+  var sorted = r.plans.slice().sort(function(a,b){
+    if(a.type !== b.type) return a.type === 'Production' ? -1 : 1;
+    return a.hall < b.hall ? -1 : 1;
+  });
+  tb.innerHTML = sorted.map(function(p){
+    var badge = p.type === 'Dispatch' ? '🚚 Dispatch' : '🏭 Production';
+    return '<tr><td><b>'+badge+'</b></td><td>'+p.hall+'</td><td><b>'+p.model+'</b></td>' +
+      '<td>'+p.planned+' <button class="btn ghost sm" onclick="editPlan(\''+p.hall+'\',\''+p.model+'\','+p.planned+',\''+p.type+'\')">✏️</button></td>' +
       '<td><b>'+p.achieved+'</b></td>' +
       '<td style="min-width:140px"><div class="progress" style="margin-top:0">' +
       '<div class="progress-fill" style="width:'+Math.min(100,p.pct)+'%"></div></div>' +
@@ -112,12 +118,12 @@ document.getElementById('planDate').addEventListener('change', function(){
   if(PIN) loadPlans();
 });
 
-
-function editPlan(hall, model, qty){
+function editPlan(hall, model, qty, type){
   document.getElementById('planHall').value = hall;
   fillModels();
   document.getElementById('planModel').value = model;
-  var v = prompt('New planned qty for ' + model + ':', qty);
+  document.getElementById('planType').value = type || 'Production';
+  var v = prompt('New planned qty for ' + model + ' (' + (type||'Production') + '):', qty);
   if(v === null || !(Number(v) > 0)) return;
   document.getElementById('planQty').value = v;
   savePlan('set');
