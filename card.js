@@ -58,10 +58,11 @@ function loadTodayPlan(){
     (r.halls||[]).forEach(function(t){
       var d = document.createElement('div');
       d.className = 'stat';
+      var icon = t.type === 'Dispatch' ? '🚚' : '🏭';
       d.innerHTML = '<div class="n">' +
         (t.planned>0 ? t.achieved+'/'+t.planned : t.achieved) +
-        '</div><div class="l">'+t.hall+" — today's plan" +
-        (t.planned>0 ? ' ('+t.pct+'%)' : ' (no plan set)')+'</div>';
+        '</div><div class="l">'+icon+' '+t.hall+' — '+t.type +
+        (t.planned>0 ? ' ('+t.pct+'%)' : ' (no plan)')+'</div>';
       box.appendChild(d);
     });
   });
