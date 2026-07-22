@@ -41,6 +41,10 @@
           <input id="planDate" type="date">
           <select id="planHall" onchange="fillModels()"></select>
           <select id="planModel"></select>
+          <select id="planType">
+            <option value="Production">Production</option>
+            <option value="Dispatch">Dispatch</option>
+          </select>
           <input id="planQty" type="number" min="1" placeholder="Planned qty" style="max-width:130px">
           <button class="btn" onclick="savePlan()">Save</button>
         </div>
@@ -63,7 +67,7 @@
           <button class="btn ghost sm" onclick="loadPlans()">↻ Refresh</button>
         </div>
         <table id="planTable">
-          <thead><tr><th>Hall</th><th>Model</th><th>Planned</th><th>Achieved</th><th>Progress</th></tr></thead>
+          <thead><tr><th>Type</th><th>Hall</th><th>Model</th><th>Planned</th><th>Achieved</th><th>Progress</th></tr></thead>
           <tbody></tbody>
         </table>
         <p class="hint" style="margin-top:10px">Achieved = batteries scanned at the hall's final stage on this date.</p>
